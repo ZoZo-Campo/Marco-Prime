@@ -145,7 +145,7 @@ cp .env.orange-pi.example .env.orange-pi
 docker compose -f compose.orange-pi.yml --env-file .env.orange-pi up -d --build
 ```
 
-Ouvrir ensuite http://127.0.0.1:3000/buy. Dans cette image, Hono sert également
+Ouvrir ensuite http://127.0.0.1:3001/. Dans cette image, Hono sert également
 le frontend compilé : un seul service applicatif tourne, sans serveur Vite.
 
 ```bash

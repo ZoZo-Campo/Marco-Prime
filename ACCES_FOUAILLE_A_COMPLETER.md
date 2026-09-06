@@ -46,7 +46,7 @@ FOUAILLE_SYNC_ENABLED=false
 catalogue HTTP. Toutes les lectures et écritures passent alors directement par
 `DATABASE_URL`, donc les nouveaux produits sont visibles immédiatement.
 
-Le conteneur est actuellement limité à `127.0.0.1:3000`. Dans ce mode kiosque
+Le conteneur est limité à `127.0.0.1:3001`. Dans ce mode kiosque
 local, ces valeurs peuvent rester ainsi :
 
 ```dotenv

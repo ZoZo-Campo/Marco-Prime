@@ -1,12 +1,14 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { swaggerUI } from "@hono/swagger-ui";
+import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { customLogger } from "./config/logger.js";
 import { openApiSpec } from "./config/openapi.js";
 import { router } from "./config/router.js";
+import { db } from "./config/database.js";
 import { authMiddleware } from "./middlewares/auth.middleware.js";
 import { errorHandler } from "./middlewares/error.middleware.js";
 import { limiter } from "./middlewares/rate-limiter.middleware.js";
@@ -28,16 +30,23 @@ export const app = new Hono()
     credentials: true,
   }))
   .use("*", limiter)
-  .get("/", (c) => c.redirect("/ui"))
   .get("/health", (c) =>
     c.json({
       status: "ok",
     }),
   )
+  .get("/ready", async (c) => {
+    await db.execute(sql`SELECT 1`);
+    return c.json({ status: "ready" });
+  })
   .get("/doc", (c) => c.json(openApiSpec))
   .get("/ui", swaggerUI({ url: "/doc" }))
   .use("/api/v1/*", authMiddleware)
   .route("/api/v1", router);
+
+if (process.env.NODE_ENV !== "production") {
+  app.get("/", (c) => c.redirect("/ui"));
+}
 
 if (process.env.NODE_ENV === "production") {
   app.use("/assets/*", serveStatic({ root: "./public" }));

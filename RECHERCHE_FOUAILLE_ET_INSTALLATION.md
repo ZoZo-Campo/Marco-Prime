@@ -113,7 +113,7 @@ docker compose -f compose.orange-pi.yml --env-file .env.orange-pi ps
 
 Renseigner impérativement dans `.env.orange-pi` la source de données validée par
 l'école. Ne jamais lancer `pnpm db:seed` sur cette base. L'interface est ensuite
-disponible à `http://127.0.0.1:3000/`. Chromium doit démarrer en mode kiosque sur
+disponible à `http://127.0.0.1:3001/`. Chromium doit démarrer en mode kiosque sur
 cette page d'accueil ; l'utilisateur choisit ensuite la fonction voulue.
 
 Le port est volontairement lié à `127.0.0.1`, donc inaccessible depuis le réseau.

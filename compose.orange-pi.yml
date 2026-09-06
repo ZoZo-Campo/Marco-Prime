@@ -4,11 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile.orange-pi
     image: marco-prime:local
+    init: true
     restart: unless-stopped
     env_file:
       - .env.orange-pi
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${MARCO_HOST_PORT:-3001}:3000"
     volumes:
       - marco_prime_logs:/app/logs
       - marco_prime_data:/app/data
@@ -18,12 +19,21 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3000/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   marco_prime_logs:
