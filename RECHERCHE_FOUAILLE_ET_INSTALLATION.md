@@ -121,6 +121,32 @@ Si une administration distante est demandée plus tard, conserver ce bind et
 passer par un VPN ou un proxy HTTPS authentifié plutôt que d'exposer directement
 le service et MySQL.
 
+## Démarrage automatique sur Raspberry Pi 4
+
+Sur Raspberry Pi OS Lite 64 bits, le script `install-raspberry-pi.sh` installe le
+minimum graphique nécessaire (Cage et Chromium), Docker et les deux services de
+démarrage. Il ouvre automatiquement la page Home sur le port 3001 en plein écran,
+seulement lorsque l'application et la base SQL répondent à `/ready`.
+
+Depuis la racine du projet copié sur le Raspberry :
+
+```bash
+chmod +x install-raspberry-pi.sh
+sudo ./install-raspberry-pi.sh
+sudo reboot
+```
+
+Le script utilise le compte ayant lancé `sudo` comme utilisateur du kiosque. Si
+le projet est installé depuis une session root, préciser explicitement le compte :
+
+```bash
+sudo ./install-raspberry-pi.sh NOM_UTILISATEUR
+```
+
+Il copie l'application dans `/opt/marco-prime` et crée les services
+`marco-prime.service` et `marco-kiosk.service`. Aucun bureau complet n'est
+installé. L'administration reste disponible par SSH.
+
 Docker recommande une politique de redémarrage pour les services persistants et
 permet des images multi-architectures ; Vite recommande de servir le dossier de
 build statique avec un véritable serveur web, ce que fait ici Hono :
