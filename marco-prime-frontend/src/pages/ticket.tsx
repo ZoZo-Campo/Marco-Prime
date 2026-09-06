@@ -4,6 +4,7 @@ import { Check } from "lucide-preact";
 import { ticketSignal, clearTicket } from "../contexts/ticket-context";
 import { Card } from "../components/ui/card";
 import { BUY_ROUTE_URL } from "./buy";
+import { HOME_ROUTE_URL } from "./home";
 
 export const TICKET_ROUTE_URL = "/ticket";
 
@@ -14,7 +15,14 @@ export function TicketPage() {
   useEffect(() => {
     if (!ticket) {
       route(BUY_ROUTE_URL);
+      return;
     }
+
+    const timeout = window.setTimeout(() => {
+      clearTicket();
+      route(HOME_ROUTE_URL);
+    }, 10_000);
+    return () => window.clearTimeout(timeout);
   }, [ticket]);
 
   if (!ticket) return null;

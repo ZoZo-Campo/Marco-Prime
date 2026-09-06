@@ -3,7 +3,6 @@ import type { z } from "zod";
 import { HTTPException } from "hono/http-exception";
 import { MemberRepository } from "../repositories/member.repository.js";
 import { OrderRepository } from "../repositories/order.repository.js";
-import { ProductRepository } from "../repositories/product.repository.js";
 import { catalogSelectionService } from "../services/catalog-selection.service.js";
 import {
   purchaseReceiptSchema,
@@ -13,34 +12,42 @@ import {
 type PurchaseRequest = z.infer<typeof purchaseRequestSchema>;
 type PurchaseReceiptDTO = z.infer<typeof purchaseReceiptSchema>;
 
+const completedPurchases = new Map<string, PurchaseReceiptDTO>();
+const purchasesInProgress = new Map<string, Promise<PurchaseReceiptDTO>>();
+const MAX_COMPLETED_PURCHASES = 1_000;
+
 export class PurchaseController {
-  private productRepository = new ProductRepository();
   private memberRepository = new MemberRepository();
   private orderRepository = new OrderRepository();
 
   async createPurchase(c: Context) {
-    const { productId, cardNumber, amount } = c.req.valid(
+    const request = c.req.valid(
       "json" as never,
     ) as PurchaseRequest;
+    const completed = completedPurchases.get(request.transactionId);
+    if (completed) return c.json(completed, 200);
 
-    const product = await this.productRepository.findById(productId);
-    if (!product) {
-      throw new HTTPException(404, {
-        message: `Product with identifier '${productId}' not found`,
-      });
+    let purchasePromise = purchasesInProgress.get(request.transactionId);
+    if (!purchasePromise) {
+      purchasePromise = this.processPurchase(request);
+      purchasesInProgress.set(request.transactionId, purchasePromise);
     }
 
-    if (!product.available) {
-      throw new HTTPException(400, {
-        message: `Product with ID ${product.id} is not available`,
-      });
+    try {
+      const receipt = await purchasePromise;
+      completedPurchases.set(request.transactionId, receipt);
+      trimCompletedPurchases();
+      return c.json(receipt, 201);
+    } finally {
+      purchasesInProgress.delete(request.transactionId);
     }
+  }
 
-    if (!(await catalogSelectionService.isSelected(product.id))) {
-      throw new HTTPException(400, {
-        message: `Product with ID ${product.id} is not selected for sale on Marco`,
-      });
-    }
+  private async processPurchase({
+    transactionId,
+    cardNumber,
+    items,
+  }: PurchaseRequest): Promise<PurchaseReceiptDTO> {
 
     const member = await this.memberRepository.findFullByCardNumber(cardNumber);
     if (!member) {
@@ -49,67 +56,57 @@ export class PurchaseController {
       });
     }
 
-    const totalPrice = (parseFloat(product.price) * amount).toFixed(2);
-    const currentBalance = parseFloat(member.balance);
-    const totalPriceNum = parseFloat(totalPrice);
-
-    if (currentBalance < totalPriceNum) {
-      const errorResponse = new Response(
-        JSON.stringify({
-          error: "Insufficient balance",
-          required: totalPrice,
-          available: member.balance,
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-      throw new HTTPException(400, { res: errorResponse });
-    }
-
     let purchase;
     try {
-      purchase = await this.orderRepository.createPurchaseTransaction(
-        product.id,
+      const selectedProductIds =
+        await catalogSelectionService.getSelectedProductIds();
+      purchase = await this.orderRepository.createCartPurchaseTransaction(
         member.id,
-        product.price,
-        amount,
+        items,
+        selectedProductIds,
       );
     } catch (error) {
-      if (error instanceof Error && error.message === "INSUFFICIENT_BALANCE") {
-        throw new HTTPException(400, {
-          message: "Insufficient balance",
-        });
+      if (error instanceof Error) {
+        if (error.message.startsWith("PRODUCT_NOT_FOUND:")) {
+          throw new HTTPException(404, { message: "Product not found" });
+        }
+        if (
+          error.message.startsWith("PRODUCT_UNAVAILABLE:") ||
+          error.message.startsWith("PRODUCT_NOT_SELECTED:")
+        ) {
+          throw new HTTPException(400, {
+            message: "A product is no longer available on this Marco",
+          });
+        }
       }
       throw error;
     }
 
-    return c.json(
-      {
-        success: true,
-        transaction: {
-          orderId: purchase.orderId,
-          date: purchase.orderDate,
-          product: {
-            id: product.id,
-            name: product.name,
-            title: product.title,
-            price: product.price,
-          },
-          member: {
-            id: member.id,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            cardNumber: member.cardNumber!,
-          },
-          amount,
-          totalPrice,
-          previousBalance: purchase.previousBalance,
-          newBalance: purchase.newBalance,
+    return {
+      success: true,
+      transaction: {
+        transactionId,
+        orderIds: purchase.orderIds,
+        date: purchase.orderDate,
+        items: purchase.items,
+        member: {
+          id: member.id,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          cardNumber: member.cardNumber!,
         },
-      } satisfies PurchaseReceiptDTO,
-      201,
-    );
+        totalPrice: purchase.totalPrice,
+        previousBalance: purchase.previousBalance,
+        newBalance: purchase.newBalance,
+      },
+    } satisfies PurchaseReceiptDTO;
+  }
+}
+
+function trimCompletedPurchases() {
+  while (completedPurchases.size > MAX_COMPLETED_PURCHASES) {
+    const oldestTransactionId = completedPurchases.keys().next().value;
+    if (!oldestTransactionId) return;
+    completedPurchases.delete(oldestTransactionId);
   }
 }

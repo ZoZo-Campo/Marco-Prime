@@ -11,7 +11,6 @@ services:
     ports:
       - "127.0.0.1:${MARCO_HOST_PORT:-3001}:3000"
     volumes:
-      - marco_prime_logs:/app/logs
       - marco_prime_data:/app/data
     healthcheck:
       test:
@@ -29,6 +28,9 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
     logging:
       driver: json-file
       options:
@@ -36,5 +38,5 @@ services:
         max-file: "3"
 
 volumes:
-  marco_prime_logs:
   marco_prime_data:
+    name: marcoprime_marco_prime_data

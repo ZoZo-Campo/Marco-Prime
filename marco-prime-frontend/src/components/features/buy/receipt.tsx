@@ -1,7 +1,7 @@
 import { MAX_RECEIPT_PRODUCTS } from "../../../constants";
 import { shopping } from "../../../contexts/shopping-context";
 import { MemberCard } from "./member-card";
-import { ResetButton, SubmitButton } from "./receipt-actions";
+import { PurchaseError, ResetButton, SubmitButton } from "./receipt-actions";
 import { ReceiptItem } from "./receipt-item";
 
 export function Receipt() {
@@ -22,6 +22,7 @@ export function Receipt() {
           count={shopping.selected.value.length - MAX_RECEIPT_PRODUCTS}
         />
       </ul>
+      <PurchaseError />
       <SubmitButton />
     </div>
   );

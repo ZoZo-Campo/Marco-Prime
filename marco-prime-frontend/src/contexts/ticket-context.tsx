@@ -5,7 +5,7 @@ import type { ProductInCart } from "./shopping-context";
 
 export type PurchaseTicketData = {
   type: "purchase";
-  transactions: PurchaseResponse["transaction"][];
+  transaction: PurchaseResponse["transaction"];
   products: ProductInCart[];
   totalPrice: number;
   memberName: string;

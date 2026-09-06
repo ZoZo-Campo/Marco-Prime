@@ -27,7 +27,6 @@
     "hono": "^4.11.3",
     "hono-rate-limiter": "^0.5.3",
     "mysql2": "^3.16.0",
-    "rotating-file-stream": "^3.2.7",
     "zod": "^4.3.5"
   },
   "devDependencies": {

@@ -142,19 +142,23 @@ puis adapter `DATABASE_URL` :
 ```bash
 cd "$HOME/Desktop/Marco Prime"
 cp .env.orange-pi.example .env.orange-pi
-docker compose -f compose.orange-pi.yml --env-file .env.orange-pi up -d --build
+./marco start
 ```
 
 Ouvrir ensuite http://127.0.0.1:3001/. Dans cette image, Hono sert également
 le frontend compilé : un seul service applicatif tourne, sans serveur Vite.
 
 ```bash
-docker compose -f compose.orange-pi.yml --env-file .env.orange-pi ps
-docker compose -f compose.orange-pi.yml --env-file .env.orange-pi logs -f
+./marco status
+./marco logs
 ```
 
 Pour l'arrêter sans effacer les données :
 
 ```bash
-docker compose -f compose.orange-pi.yml --env-file .env.orange-pi down
+./marco stop
 ```
+
+`./marco` choisit automatiquement `docker-compose` sur les Mac qui utilisent
+la commande autonome et `docker compose` sur Raspberry Pi. `./marco restart`
+recompile et recrée l'application sans effacer la sélection des produits.

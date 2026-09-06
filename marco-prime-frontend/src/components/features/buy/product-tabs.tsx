@@ -1,5 +1,6 @@
 import z from "zod";
 import { AlertCircle, RefreshCw } from "lucide-preact";
+import { useEffect } from "preact/hooks";
 import { apiUrl } from "../../../config/api";
 import { PRODUCT_PAGE_SIZE, PRODUCT_TYPE_COUNT } from "../../../constants";
 import { cn } from "../../../utils/cn";
@@ -18,7 +19,17 @@ export function ProductTabs() {
     z.array(productTypeSchema),
     apiUrl("product-types"),
   );
-  const { searchParams } = useSafeSearchParams(buySearchParamsSchema);
+  const { searchParams, route } = useSafeSearchParams(buySearchParamsSchema);
+
+  useEffect(() => {
+    if (!data?.length) return;
+    const categoryExists = data.some(
+      (category) => category.id === searchParams.categoryId,
+    );
+    if (!categoryExists) {
+      route(`${BUY_ROUTE_URL}?categoryId=${data[0]!.id}&page=1`);
+    }
+  }, [data, searchParams.categoryId]);
 
   if (loading) {
     return (

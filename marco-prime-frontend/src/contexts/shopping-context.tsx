@@ -4,6 +4,7 @@ import { computed, signal } from "@preact/signals";
 export type ProductInCart = {
   id: number;
   name: string;
+  title: string;
   price: string;
   amount: number;
   color: string;

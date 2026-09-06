@@ -27,7 +27,7 @@ if [[ "$(dpkg --print-architecture)" != "arm64" ]]; then
   exit 1
 fi
 
-for required_file in compose.orange-pi.yml Dockerfile.orange-pi .env.orange-pi; do
+for required_file in compose.orange-pi.yml Dockerfile.orange-pi .env.orange-pi marco; do
   if [[ ! -f "${SCRIPT_DIR}/${required_file}" ]]; then
     echo "Erreur : ${required_file} est absent de ${SCRIPT_DIR}."
     exit 1
@@ -91,13 +91,10 @@ if [[ "$(readlink -f "${SCRIPT_DIR}")" != "$(readlink -f "${INSTALL_DIR}")" ]]; 
     "${SCRIPT_DIR}/" "${INSTALL_DIR}/"
 fi
 chmod 600 "${INSTALL_DIR}/.env.orange-pi"
+chmod 755 "${INSTALL_DIR}/marco"
 
 echo "Construction et premier démarrage de Marco Prime..."
-docker compose \
-  --project-name marco-prime \
-  -f "${INSTALL_DIR}/compose.orange-pi.yml" \
-  --env-file "${INSTALL_DIR}/.env.orange-pi" \
-  up -d --build --force-recreate
+"${INSTALL_DIR}/marco" restart
 
 cat > /etc/systemd/system/marco-prime.service <<'UNIT'
 [Unit]

@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
 import { useEffect } from "preact/hooks";
-import { Loader2, CreditCard } from "lucide-preact";
+import { AlertTriangle, Loader2, CreditCard } from "lucide-preact";
 import { MemberProvider, useMember } from "../contexts/member-context";
 import { setTicket } from "../contexts/ticket-context";
 import { useRfid } from "../hooks/use-rfid";
@@ -17,6 +17,7 @@ export const RECHARGE_ROUTE_URL = "/recharge";
 const amountSignal = signal("");
 const isLoadingSignal = signal(false);
 const waitingForAdminSignal = signal(false);
+const rechargeErrorSignal = signal<string | null>(null);
 
 export function RechargePage() {
   return (
@@ -38,6 +39,7 @@ function RechargeContent() {
     amountSignal.value = "";
     isLoadingSignal.value = false;
     waitingForAdminSignal.value = false;
+    rechargeErrorSignal.value = null;
     resume();
   }, []);
 
@@ -52,6 +54,7 @@ function RechargeContent() {
     if (!member || !amountSignal.value) return;
 
     isLoadingSignal.value = true;
+    rechargeErrorSignal.value = null;
 
     try {
       // If member is admin, use their own card as admin card
@@ -72,10 +75,16 @@ function RechargeContent() {
           "Content-Type": "application/json",
         }),
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
       });
 
       if (!response.ok) {
-        throw new Error(`Erreur: ${response.status}`);
+        const payload = await response.json().catch(() => null);
+        throw new Error(
+          payload && typeof payload.error === "string"
+            ? payload.error
+            : `Rechargement refusé (erreur ${response.status})`,
+        );
       }
 
       const json = await response.json();
@@ -102,6 +111,14 @@ function RechargeContent() {
       clearMember();
     } catch (error) {
       console.error("Erreur de rechargement:", error);
+      rechargeErrorSignal.value =
+        error instanceof DOMException && error.name === "TimeoutError"
+          ? "Connexion perdue. Le résultat est incertain : vérifiez le solde avant de recommencer."
+          : error instanceof TypeError
+            ? "Connexion au serveur impossible. Réessayez lorsque le réseau est revenu."
+            : error instanceof Error
+              ? error.message
+              : "Le rechargement a échoué.";
       isLoadingSignal.value = false;
       waitingForAdminSignal.value = false;
       resume();
@@ -187,6 +204,13 @@ function RechargeContent() {
             </>
           )}
         </div>
+
+        {rechargeErrorSignal.value && (
+          <div class="flex gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertTriangle class="size-5 shrink-0" />
+            <span>{rechargeErrorSignal.value}</span>
+          </div>
+        )}
 
         {/* Recharge button */}
         <Button class="h-12" disabled={!canRecharge} onClick={handleRecharge}>

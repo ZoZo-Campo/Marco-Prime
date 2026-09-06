@@ -252,11 +252,22 @@ export const openApiSpec = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["productId", "cardNumber", "amount"],
+                required: ["transactionId", "cardNumber", "items"],
                 properties: {
-                  productId: { type: "integer" },
+                  transactionId: { type: "string", format: "uuid" },
                   cardNumber: { type: "integer" },
-                  amount: { type: "integer" },
+                  items: {
+                    type: "array",
+                    minItems: 1,
+                    items: {
+                      type: "object",
+                      required: ["productId", "amount"],
+                      properties: {
+                        productId: { type: "integer" },
+                        amount: { type: "integer", minimum: 1 },
+                      },
+                    },
+                  },
                 },
               },
             },
