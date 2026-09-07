@@ -1,9 +1,27 @@
 services:
+  data-permissions:
+    image: marco-prime:local
+    user: "0:0"
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /app/data"]
+    volumes:
+      - marco_prime_data:/app/data
+    restart: "no"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+
   marco-prime:
     build:
       context: .
       dockerfile: Dockerfile.orange-pi
     image: marco-prime:local
+    depends_on:
+      data-permissions:
+        condition: service_completed_successfully
     init: true
     restart: unless-stopped
     env_file:
