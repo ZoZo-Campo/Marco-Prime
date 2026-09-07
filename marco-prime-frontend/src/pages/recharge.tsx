@@ -18,6 +18,7 @@ const amountSignal = signal("");
 const isLoadingSignal = signal(false);
 const waitingForAdminSignal = signal(false);
 const rechargeErrorSignal = signal<string | null>(null);
+const pendingRechargeTransactionId = signal<string | null>(null);
 
 export function RechargePage() {
   return (
@@ -40,6 +41,7 @@ function RechargeContent() {
     isLoadingSignal.value = false;
     waitingForAdminSignal.value = false;
     rechargeErrorSignal.value = null;
+    pendingRechargeTransactionId.value = null;
     resume();
   }, []);
 
@@ -61,9 +63,12 @@ function RechargeContent() {
       const adminCardNumber = adminCard ?? (member.admin ? member.cardNumber : undefined);
 
       const body: Record<string, unknown> = {
+        transactionId:
+          pendingRechargeTransactionId.value ?? crypto.randomUUID(),
         cardNumber: member.cardNumber,
         amount: Number(amountSignal.value),
       };
+      pendingRechargeTransactionId.value = body.transactionId as string;
 
       if (adminCardNumber) {
         body.adminCardNumber = adminCardNumber;
@@ -80,6 +85,9 @@ function RechargeContent() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
+        if (response.status < 500) {
+          pendingRechargeTransactionId.value = null;
+        }
         throw new Error(
           payload && typeof payload.error === "string"
             ? payload.error
@@ -93,17 +101,10 @@ function RechargeContent() {
       setTicket({
         type: "recharge",
         transaction: result.transaction,
-        memberName: `${result.transaction.member.firstName} ${result.transaction.member.lastName}`,
-        amount: result.transaction.amount,
-        previousBalance: result.transaction.previousBalance,
-        newBalance: result.transaction.newBalance,
-        processedBy: result.transaction.processedBy
-          ? `${result.transaction.processedBy.firstName} ${result.transaction.processedBy.lastName}`
-          : undefined,
-        date: result.transaction.date,
       });
 
       amountSignal.value = "";
+      pendingRechargeTransactionId.value = null;
       waitingForAdminSignal.value = false;
       isLoadingSignal.value = false;
       resume();
@@ -217,7 +218,7 @@ function RechargeContent() {
           {isLoadingSignal.value ? (
             <Loader2 class="size-5 animate-spin" />
           ) : (
-            `Recharger ${amount.toFixed(2)} €`
+            `${pendingRechargeTransactionId.value ? "Réessayer" : "Recharger"} ${amount.toFixed(2)} €`
           )}
         </Button>
       </aside>

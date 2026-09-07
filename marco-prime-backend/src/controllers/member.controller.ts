@@ -16,7 +16,7 @@ export class MemberController {
 
     if (!member) {
       throw new HTTPException(404, {
-        message: `Member with identifier '${card_number}' not found`,
+        message: "Carte membre inconnue",
       });
     }
 

@@ -35,11 +35,14 @@ export function useApi<T>(
   const [error, setError] = useState<Error | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
 
   const refetch = async () => {
     // Annuler la requête précédente si elle existe
     abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
+    abortRef.current = controller;
 
     setLoading(true);
     setError(null);
@@ -47,7 +50,7 @@ export function useApi<T>(
     try {
       const res = await fetch(url, {
         ...fetchOptions,
-        signal: abortRef.current.signal,
+        signal: controller.signal,
         headers: apiHeaders(fetchOptions?.headers),
       });
 
@@ -58,21 +61,28 @@ export function useApi<T>(
       const json = await res.json();
       const validatedData = schema.parse(json);
 
-      setData(validatedData);
-      setError(null);
+      if (requestId === requestIdRef.current) {
+        setData(validatedData);
+        setError(null);
+      }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         // Requête annulée, ne pas mettre à jour l'état
         return;
       }
-      setError(err instanceof Error ? err : new Error("Unknown error"));
-      setData(null);
+      if (requestId === requestIdRef.current) {
+        setError(err instanceof Error ? err : new Error("Unknown error"));
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   const reset = () => {
+    requestIdRef.current += 1;
     abortRef.current?.abort();
     setData(null);
     setError(null);

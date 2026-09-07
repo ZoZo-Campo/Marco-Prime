@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "../../src/config/database.js";
 import { members, products } from "../../src/db/schema.js";
 
@@ -55,6 +55,32 @@ export const getAvailableProductId = async () => {
   }
 
   return product[0].id;
+};
+
+export const getAvailableProductIds = async (limit = 2) => {
+  const availableProducts = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(eq(products.available, true))
+    .orderBy(asc(products.id))
+    .limit(limit);
+
+  if (availableProducts.length < limit) {
+    throw new Error(`At least ${limit} available products are required.`);
+  }
+
+  return availableProducts.map((product) => product.id);
+};
+
+export const getBalanceByCardNumber = async (cardNumber: number) => {
+  const [member] = await db
+    .select({ balance: members.balance })
+    .from(members)
+    .where(eq(members.cardNumber, cardNumber))
+    .limit(1);
+
+  if (!member) throw new Error("Member not found.");
+  return member.balance;
 };
 
 export const getUnavailableProductId = async () => {

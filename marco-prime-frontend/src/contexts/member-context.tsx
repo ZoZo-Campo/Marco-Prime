@@ -10,7 +10,9 @@ import { apiUrl } from "../config/api";
 const MemberContext = createContext<{
   data: z.infer<typeof memberSchema> | null;
   loading: boolean;
+  error: Error | null;
   paused: boolean;
+  retry: () => Promise<void>;
   clear: () => void;
   pause: () => void;
   resume: () => void;
@@ -25,8 +27,8 @@ export function useMember() {
 
 export function MemberProvider({ children }: PropsWithChildren) {
   const [paused, setPaused] = useState(false);
-  const { value: memberCardId, clear: clearRfid } = useRfid({ disabled: paused });
-  const { data, loading, refetch, reset } = useApi(
+  const { value: memberCardId, scanId, clear: clearRfid } = useRfid({ disabled: paused });
+  const { data, loading, error, refetch, reset } = useApi(
     memberSchema,
     apiUrl(`member/${memberCardId}`),
     { immediate: false },
@@ -34,7 +36,7 @@ export function MemberProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (memberCardId) refetch();
-  }, [memberCardId]);
+  }, [memberCardId, scanId]);
 
   const pause = () => setPaused(true);
   const resume = () => setPaused(false);
@@ -44,7 +46,9 @@ export function MemberProvider({ children }: PropsWithChildren) {
   };
 
   return (
-    <MemberContext.Provider value={{ data, loading, paused, clear, pause, resume }}>
+    <MemberContext.Provider
+      value={{ data, loading, error, paused, retry: refetch, clear, pause, resume }}
+    >
       {children}
     </MemberContext.Provider>
   );

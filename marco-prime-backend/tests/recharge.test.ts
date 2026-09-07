@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { app } from "../src/index.js";
 import {
   authenticatedOptions,
+  getBalanceByCardNumber,
   getAdminCardNumber,
   getNonAdminCardNumber,
 } from "./utils/helpers.js";
@@ -16,6 +17,7 @@ describe("Recharge Endpoint", async () => {
     const res = await client.api.v1.recharge.$post(
       {
         json: {
+          transactionId: crypto.randomUUID(),
           cardNumber: nonAdminCardNumber,
           adminCardNumber,
           amount: 10.5,
@@ -40,6 +42,7 @@ describe("Recharge Endpoint", async () => {
     const res = await client.api.v1.recharge.$post(
       {
         json: {
+          transactionId: crypto.randomUUID(),
           cardNumber: adminCardNumber,
           amount: 10.5,
         },
@@ -53,10 +56,62 @@ describe("Recharge Endpoint", async () => {
     expect(data.transaction).not.toHaveProperty("processedBy");
   });
 
+  it("should return the first receipt without crediting twice on retry", async () => {
+    const transactionId = crypto.randomUUID();
+    const request = {
+      json: {
+        transactionId,
+        cardNumber: nonAdminCardNumber,
+        adminCardNumber,
+        amount: 4.25,
+      },
+    };
+
+    const first = await client.api.v1.recharge.$post(request, authenticatedOptions);
+    const balanceAfterFirst = await getBalanceByCardNumber(nonAdminCardNumber);
+    const retry = await client.api.v1.recharge.$post(request, authenticatedOptions);
+    const balanceAfterRetry = await getBalanceByCardNumber(nonAdminCardNumber);
+
+    expect(first.status).toBe(201);
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toEqual(await first.json());
+    expect(balanceAfterRetry).toBe(balanceAfterFirst);
+  });
+
+  it("should reject a reused transaction identifier with different data", async () => {
+    const transactionId = crypto.randomUUID();
+    const first = await client.api.v1.recharge.$post(
+      {
+        json: {
+          transactionId,
+          cardNumber: nonAdminCardNumber,
+          adminCardNumber,
+          amount: 1,
+        },
+      },
+      authenticatedOptions,
+    );
+    const conflict = await client.api.v1.recharge.$post(
+      {
+        json: {
+          transactionId,
+          cardNumber: nonAdminCardNumber,
+          adminCardNumber,
+          amount: 2,
+        },
+      },
+      authenticatedOptions,
+    );
+
+    expect(first.status).toBe(201);
+    expect(conflict.status).toBe(409);
+  });
+
   it("should return 404 for non-existent member", async () => {
     const res = await client.api.v1.recharge.$post(
       {
         json: {
+          transactionId: crypto.randomUUID(),
           cardNumber: 999999,
           adminCardNumber,
           amount: 10,
@@ -74,6 +129,7 @@ describe("Recharge Endpoint", async () => {
     const res = await client.api.v1.recharge.$post(
       {
         json: {
+          transactionId: crypto.randomUUID(),
           cardNumber: nonAdminCardNumber,
           adminCardNumber: 999999,
           amount: 10,
@@ -91,6 +147,7 @@ describe("Recharge Endpoint", async () => {
     const res = await client.api.v1.recharge.$post(
       {
         json: {
+          transactionId: crypto.randomUUID(),
           cardNumber: nonAdminCardNumber,
           adminCardNumber: nonAdminCardNumber,
           amount: 10,
@@ -108,6 +165,7 @@ describe("Recharge Endpoint", async () => {
     const res = await client.api.v1.recharge.$post(
       {
         json: {
+          transactionId: crypto.randomUUID(),
           cardNumber: nonAdminCardNumber,
           amount: 10,
         },
@@ -123,6 +181,7 @@ describe("Recharge Endpoint", async () => {
   it("should return 401 without authentication", async () => {
     const res = await client.api.v1.recharge.$post({
       json: {
+        transactionId: crypto.randomUUID(),
         cardNumber: nonAdminCardNumber,
         adminCardNumber,
         amount: 10,

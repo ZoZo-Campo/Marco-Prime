@@ -10,8 +10,24 @@ export class OrderRepository {
 
   async findMany(limit: number, offset: number) {
     return await db
-      .select()
+      .select({
+        id: orders.id,
+        product: {
+          id: products.id,
+          name: products.name,
+        },
+        member: {
+          id: members.id,
+          firstName: members.firstName,
+          lastName: members.lastName,
+        },
+        price: orders.price,
+        amount: orders.amount,
+        date: orders.date,
+      })
       .from(orders)
+      .leftJoin(products, eq(orders.productId, products.id))
+      .leftJoin(members, eq(orders.memberId, members.id))
       .limit(limit)
       .offset(offset)
       .orderBy(desc(orders.date));

@@ -22,6 +22,30 @@ describe("History Endpoint", () => {
     expect(data.pagination).toHaveProperty("limit");
     expect(data.pagination).toHaveProperty("total");
     expect(data.pagination).toHaveProperty("totalPages");
+
+    if (data.data.length > 0) {
+      expect(data.data[0]).toMatchObject({
+        id: expect.any(Number),
+        price: expect.any(String),
+        amount: expect.any(Number),
+        date: expect.any(String),
+      });
+      expect(data.data[0]).toHaveProperty("product");
+      expect(data.data[0]).toHaveProperty("member");
+      if (data.data[0].product) {
+        expect(data.data[0].product).toMatchObject({
+          id: expect.any(Number),
+          name: expect.any(String),
+        });
+      }
+      if (data.data[0].member) {
+        expect(data.data[0].member).toMatchObject({
+          id: expect.any(Number),
+          firstName: expect.any(String),
+          lastName: expect.any(String),
+        });
+      }
+    }
   });
 
   it("should return paginated order history with custom pagination", async () => {

@@ -12,8 +12,16 @@ import {
 type PurchaseRequest = z.infer<typeof purchaseRequestSchema>;
 type PurchaseReceiptDTO = z.infer<typeof purchaseReceiptSchema>;
 
-const completedPurchases = new Map<string, PurchaseReceiptDTO>();
-const purchasesInProgress = new Map<string, Promise<PurchaseReceiptDTO>>();
+type CachedPurchase = {
+  requestKey: string;
+  receipt: PurchaseReceiptDTO;
+};
+
+const completedPurchases = new Map<string, CachedPurchase>();
+const purchasesInProgress = new Map<
+  string,
+  { requestKey: string; promise: Promise<PurchaseReceiptDTO> }
+>();
 const MAX_COMPLETED_PURCHASES = 1_000;
 
 export class PurchaseController {
@@ -24,18 +32,37 @@ export class PurchaseController {
     const request = c.req.valid(
       "json" as never,
     ) as PurchaseRequest;
+    const requestKey = JSON.stringify({
+      cardNumber: request.cardNumber,
+      items: request.items,
+    });
     const completed = completedPurchases.get(request.transactionId);
-    if (completed) return c.json(completed, 200);
+    if (completed) {
+      if (completed.requestKey !== requestKey) {
+        throw new HTTPException(409, {
+          message: "Cet identifiant de transaction appartient à un autre panier",
+        });
+      }
+      return c.json(completed.receipt, 200);
+    }
 
-    let purchasePromise = purchasesInProgress.get(request.transactionId);
-    if (!purchasePromise) {
-      purchasePromise = this.processPurchase(request);
-      purchasesInProgress.set(request.transactionId, purchasePromise);
+    let inProgress = purchasesInProgress.get(request.transactionId);
+    if (inProgress && inProgress.requestKey !== requestKey) {
+      throw new HTTPException(409, {
+        message: "Cet identifiant de transaction appartient à un autre panier",
+      });
+    }
+    if (!inProgress) {
+      inProgress = {
+        requestKey,
+        promise: this.processPurchase(request),
+      };
+      purchasesInProgress.set(request.transactionId, inProgress);
     }
 
     try {
-      const receipt = await purchasePromise;
-      completedPurchases.set(request.transactionId, receipt);
+      const receipt = await inProgress.promise;
+      completedPurchases.set(request.transactionId, { requestKey, receipt });
       trimCompletedPurchases();
       return c.json(receipt, 201);
     } finally {
@@ -52,7 +79,7 @@ export class PurchaseController {
     const member = await this.memberRepository.findFullByCardNumber(cardNumber);
     if (!member) {
       throw new HTTPException(404, {
-        message: `Member with identifier '${cardNumber}' not found`,
+        message: "Carte membre inconnue",
       });
     }
 

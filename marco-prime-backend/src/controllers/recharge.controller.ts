@@ -10,18 +10,73 @@ import {
 type RechargeRequest = z.infer<typeof rechargeRequestSchema>;
 type RechargeReceiptDTO = z.infer<typeof rechargeReceiptSchema>;
 
+type CachedRecharge = {
+  requestKey: string;
+  receipt: RechargeReceiptDTO;
+};
+
+const completedRecharges = new Map<string, CachedRecharge>();
+const rechargesInProgress = new Map<
+  string,
+  { requestKey: string; promise: Promise<RechargeReceiptDTO> }
+>();
+const MAX_COMPLETED_RECHARGES = 1_000;
+
 export class RechargeController {
   private memberRepository = new MemberRepository();
 
   async createRecharge(c: Context) {
-    const { cardNumber, adminCardNumber, amount } = c.req.valid(
+    const request = c.req.valid(
       "json" as never,
     ) as RechargeRequest;
+    const { transactionId, cardNumber, adminCardNumber, amount } = request;
+    const requestKey = JSON.stringify({ cardNumber, adminCardNumber, amount });
+    const completed = completedRecharges.get(transactionId);
+
+    if (completed) {
+      if (completed.requestKey !== requestKey) {
+        throw new HTTPException(409, {
+          message: "Cet identifiant de transaction appartient à un autre rechargement",
+        });
+      }
+      return c.json(completed.receipt, 200);
+    }
+
+    let inProgress = rechargesInProgress.get(transactionId);
+    if (inProgress && inProgress.requestKey !== requestKey) {
+      throw new HTTPException(409, {
+        message: "Cet identifiant de transaction appartient à un autre rechargement",
+      });
+    }
+    if (!inProgress) {
+      inProgress = {
+        requestKey,
+        promise: this.processRecharge(request),
+      };
+      rechargesInProgress.set(transactionId, inProgress);
+    }
+
+    try {
+      const receipt = await inProgress.promise;
+      completedRecharges.set(transactionId, { requestKey, receipt });
+      trimCompletedRecharges();
+      return c.json(receipt, 201);
+    } finally {
+      rechargesInProgress.delete(transactionId);
+    }
+  }
+
+  private async processRecharge({
+    transactionId,
+    cardNumber,
+    adminCardNumber,
+    amount,
+  }: RechargeRequest): Promise<RechargeReceiptDTO> {
 
     const member = await this.memberRepository.findFullByCardNumber(cardNumber);
     if (!member) {
       throw new HTTPException(404, {
-        message: `Member with identifier '${cardNumber}' not found`,
+        message: "Carte membre inconnue",
       });
     }
 
@@ -38,7 +93,7 @@ export class RechargeController {
         await this.memberRepository.findFullByCardNumber(adminCardNumber);
       if (!admin) {
         throw new HTTPException(404, {
-          message: `Admin member with identifier '${adminCardNumber}' not found`,
+          message: "Carte administrateur inconnue",
         });
       }
 
@@ -57,32 +112,38 @@ export class RechargeController {
       rechargeAmount,
     );
 
-    return c.json(
-      {
-        success: true,
-        transaction: {
-          date: new Date(),
-          member: {
-            id: member.id,
-            firstName: member.firstName,
-            lastName: member.lastName,
-            cardNumber: member.cardNumber!,
-          },
-          processedBy: adminMember
-            ? {
-                id: adminMember.id,
-                firstName: adminMember.firstName,
-                lastName: adminMember.lastName,
-                cardNumber: adminMember.cardNumber!,
-                isAdmin: adminMember.admin,
-              }
-            : undefined,
-          amount: rechargeAmount.toFixed(2),
-          previousBalance: balances.previousBalance,
-          newBalance: balances.newBalance,
+    return {
+      success: true,
+      transaction: {
+        transactionId,
+        date: new Date(),
+        member: {
+          id: member.id,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          cardNumber: member.cardNumber!,
         },
-      } satisfies RechargeReceiptDTO,
-      201,
-    );
+        processedBy: adminMember
+          ? {
+              id: adminMember.id,
+              firstName: adminMember.firstName,
+              lastName: adminMember.lastName,
+              cardNumber: adminMember.cardNumber!,
+              isAdmin: adminMember.admin,
+            }
+          : undefined,
+        amount: rechargeAmount.toFixed(2),
+        previousBalance: balances.previousBalance,
+        newBalance: balances.newBalance,
+      },
+    } satisfies RechargeReceiptDTO;
+  }
+}
+
+function trimCompletedRecharges() {
+  while (completedRecharges.size > MAX_COMPLETED_RECHARGES) {
+    const oldestTransactionId = completedRecharges.keys().next().value;
+    if (!oldestTransactionId) return;
+    completedRecharges.delete(oldestTransactionId);
   }
 }

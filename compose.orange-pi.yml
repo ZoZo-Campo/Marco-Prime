@@ -8,6 +8,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env.orange-pi
+    environment:
+      # Le service écoute toujours sur 3000 dans le conteneur. Seul
+      # MARCO_HOST_PORT change le port visible sur le Mac/Raspberry.
+      API_PORT: "3000"
     ports:
       - "127.0.0.1:${MARCO_HOST_PORT:-3001}:3000"
     volumes:

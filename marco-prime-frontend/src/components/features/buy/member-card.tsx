@@ -5,15 +5,31 @@ import { cn } from "../../../utils/cn";
 import { hasInsufficientBalance } from "../../../utils/validation";
 import type { memberSchema } from "../../../schemas/member.schema";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
+import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
 
 export function MemberCard() {
-  const { data, loading } = useMember();
+  const { data, loading, error, retry } = useMember();
 
-  if (!data) return <NoMemberCard />;
   if (loading) return <MemberCardLoading />;
+  if (error) return <MemberCardError retry={retry} />;
+  if (!data) return <NoMemberCard />;
 
   return <MemberCardLoaded member={data} />;
+}
+
+function MemberCardError({ retry }: { retry: () => Promise<void> }) {
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>Carte non reconnue</AlertTitle>
+      <AlertDescription class="flex flex-col gap-2">
+        <span>Vérifiez la carte ou la connexion au serveur.</span>
+        <Button variant="outline" size="sm" onClick={() => void retry()}>
+          Réessayer
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 function NoMemberCard() {

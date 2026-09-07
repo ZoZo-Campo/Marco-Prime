@@ -9,11 +9,13 @@ export const orderSchema = z.object({
       name: z.string(),
     })
     .nullable(),
-  member: z.object({
-    id: z.coerce.number(),
-    firstName: z.string(),
-    lastName: z.string(),
-  }),
+  member: z
+    .object({
+      id: z.coerce.number(),
+      firstName: z.string(),
+      lastName: z.string(),
+    })
+    .nullable(),
   price: z.string(),
   amount: z.coerce.number(),
   date: z.string(),

@@ -45,7 +45,6 @@ export function SubmitButton() {
     isLoading.value = true;
     purchaseError.value = null;
     const products = [...shopping.selected.value];
-    const totalPrice = shopping.total.value;
     const transactionId = pendingTransactionId.value ?? crypto.randomUUID();
     pendingTransactionId.value = transactionId;
 
@@ -80,11 +79,6 @@ export function SubmitButton() {
       setTicket({
         type: "purchase",
         transaction: result.transaction,
-        products,
-        totalPrice,
-        memberName: `${data.firstName} ${data.lastName}`,
-        newBalance: result.transaction.newBalance,
-        date: result.transaction.date,
       });
 
       pendingTransactionId.value = null;

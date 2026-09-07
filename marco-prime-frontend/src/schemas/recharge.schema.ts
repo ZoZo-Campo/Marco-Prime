@@ -3,6 +3,7 @@ import z from "zod";
 export const rechargeResponseSchema = z.object({
   success: z.boolean(),
   transaction: z.object({
+    transactionId: z.string().uuid(),
     date: z.string(),
     member: z.object({
       id: z.coerce.number(),

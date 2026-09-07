@@ -4,7 +4,16 @@ import { seed } from "drizzle-seed";
 import mysql from "mysql2/promise";
 import * as schema from "./schema.js";
 
-const connection = await mysql.createConnection(process.env.DATABASE_URL!);
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error("DATABASE_URL is not defined");
+
+const parsedDatabaseUrl = new URL(databaseUrl);
+const localHosts = new Set(["localhost", "127.0.0.1", "[::1]", "mysql"]);
+if (!localHosts.has(parsedDatabaseUrl.hostname)) {
+  throw new Error("Seed refused: only a local Docker database can be reset");
+}
+
+const connection = await mysql.createConnection(databaseUrl);
 const db = drizzle(connection);
 
 async function main() {

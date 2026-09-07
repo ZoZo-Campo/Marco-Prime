@@ -37,6 +37,17 @@ validate_environment() {
     echo "Erreur : DATABASE_URL doit être une URL MySQL complète."
     exit 1
   fi
+
+  if ! grep -Eq '^API_PORT=3000$' "${ENV_FILE}"; then
+    echo "Erreur : API_PORT doit rester à 3000 (port interne Docker)."
+    echo "Pour changer http://127.0.0.1:3001, modifie uniquement MARCO_HOST_PORT."
+    exit 1
+  fi
+
+  if ! grep -Eq '^MARCO_HOST_PORT=[0-9]+$' "${ENV_FILE}"; then
+    echo "Erreur : MARCO_HOST_PORT doit être un numéro de port."
+    exit 1
+  fi
 }
 
 compose() {

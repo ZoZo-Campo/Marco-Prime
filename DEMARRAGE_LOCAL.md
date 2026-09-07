@@ -110,17 +110,23 @@ ce fichier manuellement.
 
 ## 3. Tests et compilation
 
+Les tests refusent maintenant de démarrer si `DATABASE_URL` ne désigne pas une
+base locale dont le nom contient `test`. Cette protection évite de modifier
+Fouaille par erreur. Avec le conteneur MySQL local de développement :
+
 ```bash
 cd "$HOME/Desktop/Marco Prime/marco-prime-backend"
+docker exec marco-prime-mysql mysql -uroot -proot \
+  -e "CREATE DATABASE IF NOT EXISTS marco_prime_test; GRANT ALL PRIVILEGES ON marco_prime_test.* TO 'marco'@'%';"
+DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm db:push
+DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm db:seed
+DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm test
+DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm test:coverage
 pnpm build
-pnpm exec vitest run --exclude='dist/**'
 
 cd "$HOME/Desktop/Marco Prime/marco-prime-frontend"
 pnpm build
 ```
-
-L'exclusion de `dist/**` évite que Vitest exécute deux fois les tests après une
-compilation du backend.
 
 ## 4. Arrêt
 
@@ -142,6 +148,7 @@ puis adapter `DATABASE_URL` :
 ```bash
 cd "$HOME/Desktop/Marco Prime"
 cp .env.orange-pi.example .env.orange-pi
+./marco check
 ./marco start
 ```
 
@@ -162,3 +169,7 @@ Pour l'arrêter sans effacer les données :
 `./marco` choisit automatiquement `docker-compose` sur les Mac qui utilisent
 la commande autonome et `docker compose` sur Raspberry Pi. `./marco restart`
 recompile et recrée l'application sans effacer la sélection des produits.
+
+`API_PORT` doit toujours rester à `3000` : c'est le port interne du conteneur.
+Pour changer l'adresse visible, modifier seulement `MARCO_HOST_PORT` (par défaut
+`3001`), puis utiliser par exemple `http://127.0.0.1:3001/`.

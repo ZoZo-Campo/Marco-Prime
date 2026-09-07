@@ -32,7 +32,7 @@ export function TicketPage() {
     route(BUY_ROUTE_URL);
   };
 
-  const formattedDate = new Date(ticket.date).toLocaleString("fr-FR", {
+  const formattedDate = new Date(ticket.transaction.date).toLocaleString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -54,7 +54,9 @@ export function TicketPage() {
         </div>
 
         <div class="px-6 text-center">
-          <p class="text-lg font-medium">{ticket.memberName}</p>
+          <p class="text-lg font-medium">
+            {ticket.transaction.member.firstName} {ticket.transaction.member.lastName}
+          </p>
           <p class="text-sm text-muted-foreground">{formattedDate}</p>
         </div>
 
@@ -78,25 +80,27 @@ function PurchaseTicketContent({ ticket }: { ticket: Extract<typeof ticketSignal
   return (
     <>
       <div class="px-6 border-t border-b py-3">
-        {ticket.products.map((product) => (
-          <div key={product.id} class="flex justify-between py-1 text-sm">
+        {ticket.transaction.items.map((item) => (
+          <div key={item.product.id} class="flex justify-between py-1 text-sm">
             <span>
-              {product.amount}x {product.name}
+              {item.amount}x {item.product.name}
             </span>
-            <span>{(Number(product.price) * product.amount).toFixed(2)} EUR</span>
+            <span>{item.totalPrice} EUR</span>
           </div>
         ))}
       </div>
 
       <div class="px-6 flex justify-between font-bold text-lg">
         <span>Total</span>
-        <span>-{ticket.totalPrice.toFixed(2)} EUR</span>
+        <span>-{ticket.transaction.totalPrice} EUR</span>
       </div>
 
       <div class="px-6 pt-2 border-t">
         <div class="flex justify-between text-sm">
           <span class="text-muted-foreground">Nouveau solde</span>
-          <span class="font-semibold text-green-600">{ticket.newBalance} EUR</span>
+          <span class="font-semibold text-green-600">
+            {ticket.transaction.newBalance} EUR
+          </span>
         </div>
       </div>
     </>
@@ -111,24 +115,27 @@ function RechargeTicketContent({ ticket }: { ticket: Extract<typeof ticketSignal
       <div class="px-6 border-t border-b py-3 space-y-2">
         <div class="flex justify-between text-sm">
           <span class="text-muted-foreground">Ancien solde</span>
-          <span>{ticket.previousBalance} EUR</span>
+          <span>{ticket.transaction.previousBalance} EUR</span>
         </div>
         <div class="flex justify-between text-sm">
           <span class="text-muted-foreground">Rechargement</span>
-          <span class="text-green-600">+{ticket.amount} EUR</span>
+          <span class="text-green-600">+{ticket.transaction.amount} EUR</span>
         </div>
       </div>
 
       <div class="px-6 flex justify-between font-bold text-lg">
         <span>Nouveau solde</span>
-        <span class="text-green-600">{ticket.newBalance} EUR</span>
+        <span class="text-green-600">{ticket.transaction.newBalance} EUR</span>
       </div>
 
-      {ticket.processedBy && (
+      {ticket.transaction.processedBy && (
         <div class="px-6 pt-2 border-t">
           <div class="flex justify-between text-sm">
             <span class="text-muted-foreground">Validé par</span>
-            <span class="font-medium">{ticket.processedBy}</span>
+            <span class="font-medium">
+              {ticket.transaction.processedBy.firstName}{" "}
+              {ticket.transaction.processedBy.lastName}
+            </span>
           </div>
         </div>
       )}

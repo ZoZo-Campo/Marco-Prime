@@ -298,8 +298,9 @@ export const openApiSpec = {
             "application/json": {
               schema: {
                 type: "object",
-                required: ["cardNumber", "amount"],
+                required: ["transactionId", "cardNumber", "amount"],
                 properties: {
+                  transactionId: { type: "string", format: "uuid" },
                   cardNumber: { type: "integer" },
                   adminCardNumber: { type: "integer" },
                   amount: { type: "number" },

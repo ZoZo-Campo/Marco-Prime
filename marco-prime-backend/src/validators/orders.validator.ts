@@ -2,8 +2,19 @@ import { z } from "zod";
 
 export const orderSchema = z.object({
   id: z.number(),
-  productId: z.number().nullable(),
-  memberId: z.number().nullable(),
+  product: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+    })
+    .nullable(),
+  member: z
+    .object({
+      id: z.number(),
+      firstName: z.string(),
+      lastName: z.string(),
+    })
+    .nullable(),
   price: z.string(),
   amount: z.number(),
   date: z.date(),
