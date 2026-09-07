@@ -1,5 +1,12 @@
 import type { ComponentChildren } from "preact";
-import { Check, CreditCard, Loader2, Save, ShieldAlert } from "lucide-preact";
+import {
+  AlertCircle,
+  Check,
+  CreditCard,
+  Loader2,
+  Save,
+  ShieldAlert,
+} from "lucide-preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { apiHeaders, apiUrl } from "../config/api";
 import { MemberProvider, useMember } from "../contexts/member-context";
@@ -25,7 +32,14 @@ export function ConfigPage() {
 }
 
 function ConfigContent() {
-  const { data: member, loading: memberLoading, clear } = useMember();
+  const {
+    data: member,
+    loading: memberLoading,
+    error: memberError,
+    inputLength,
+    retry,
+    clear,
+  } = useMember();
   const isAdmin = member?.admin === true;
   const {
     data: catalog,
@@ -58,14 +72,31 @@ function ConfigContent() {
       <CenteredCard>
         {memberLoading ? (
           <Loader2 class="size-14 animate-spin text-primary" />
+        ) : memberError ? (
+          <AlertCircle class="size-16 text-destructive" />
         ) : (
           <CreditCard class="size-16 text-primary" />
         )}
         <h1 class="text-3xl font-bold">Configuration des ventes</h1>
-        <p class="max-w-xl text-center text-lg text-muted-foreground">
-          Scannez une carte administrateur pour choisir les produits Fouaille
-          proposés sur cette Marco.
-        </p>
+        {memberError ? (
+          <>
+            <p class="max-w-xl text-center text-lg text-destructive">
+              Carte inconnue ou serveur indisponible.
+            </p>
+            <div class="flex gap-3">
+              <Button variant="outline" onClick={() => void retry()}>
+                Réessayer
+              </Button>
+              <Button onClick={clear}>Saisir une autre carte</Button>
+            </div>
+          </>
+        ) : (
+          <p class="max-w-xl text-center text-lg text-muted-foreground">
+            {inputLength > 0
+              ? `Saisie en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}. Appuyez sur Entrée.`
+              : "Scannez une carte administrateur, ou saisissez son numéro puis appuyez sur Entrée."}
+          </p>
+        )}
       </CenteredCard>
     );
   }

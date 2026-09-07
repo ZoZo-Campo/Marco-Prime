@@ -9,11 +9,11 @@ import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
 
 export function MemberCard() {
-  const { data, loading, error, retry } = useMember();
+  const { data, loading, error, inputLength, retry } = useMember();
 
   if (loading) return <MemberCardLoading />;
   if (error) return <MemberCardError retry={retry} />;
-  if (!data) return <NoMemberCard />;
+  if (!data) return <NoMemberCard inputLength={inputLength} />;
 
   return <MemberCardLoaded member={data} />;
 }
@@ -32,10 +32,14 @@ function MemberCardError({ retry }: { retry: () => Promise<void> }) {
   );
 }
 
-function NoMemberCard() {
+function NoMemberCard({ inputLength }: { inputLength: number }) {
   return (
-    <Alert variant="destructive">
-      <AlertDescription>Veuillez scanner une carte</AlertDescription>
+    <Alert variant={inputLength > 0 ? "default" : "destructive"}>
+      <AlertDescription>
+        {inputLength > 0
+          ? `Saisie en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}. Appuyez sur Entrée.`
+          : "Veuillez scanner une carte ou saisir son numéro puis appuyer sur Entrée."}
+      </AlertDescription>
     </Alert>
   );
 }

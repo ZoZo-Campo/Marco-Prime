@@ -3,7 +3,9 @@ import { rateLimiter } from "hono-rate-limiter";
 
 const rateLimiterInstance = rateLimiter({
   windowMs: 60 * 1000, // 1 minute
-  limit: 100, // max 10 requests per minute per IP
+  // Une seule adresse locale sert le kiosque. Cette marge évite de bloquer
+  // l'interface après plusieurs erreurs de saisie tout en limitant les abus.
+  limit: 300,
   standardHeaders: "draft-7", // Return rate limit info in the `RateLimit-*` headers
   keyGenerator: (c) => {
     // Use IP address as the key for rate limiting

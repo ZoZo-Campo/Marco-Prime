@@ -30,7 +30,15 @@ export function RechargePage() {
 
 function RechargeContent() {
   const { route } = useLocation();
-  const { data: member, clear: clearMember, pause, resume } = useMember();
+  const {
+    data: member,
+    error: memberLookupError,
+    inputLength,
+    retry: retryMember,
+    clear: clearMember,
+    pause,
+    resume,
+  } = useMember();
 
   const { value: adminCardNumber, clear: clearAdminRfid } = useRfid({
     disabled: !waitingForAdminSignal.value,
@@ -180,9 +188,31 @@ function RechargeContent() {
           </Card>
         ) : (
           <Card class="gap-2 py-4 px-4">
-            <p class="text-muted-foreground text-center">
-              Scannez une carte membre
-            </p>
+            {memberLookupError ? (
+              <>
+                <p class="text-destructive text-center">
+                  Carte inconnue ou serveur indisponible
+                </p>
+                <div class="flex gap-2">
+                  <Button
+                    variant="outline"
+                    class="flex-1"
+                    onClick={() => void retryMember()}
+                  >
+                    Réessayer
+                  </Button>
+                  <Button class="flex-1" onClick={clearMember}>
+                    Autre carte
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p class="text-muted-foreground text-center">
+                {inputLength > 0
+                  ? `Saisie en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}. Appuyez sur Entrée.`
+                  : "Scannez une carte, ou saisissez son numéro puis appuyez sur Entrée."}
+              </p>
+            )}
           </Card>
         )}
 
