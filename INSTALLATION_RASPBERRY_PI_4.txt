@@ -4,16 +4,13 @@ INSTALLATION DE MARCO PRIME SUR RASPBERRY PI 4 MODEL B
 IMPORTANT
 ---------
 
-- Ce guide est prévu pour Raspberry Pi OS Lite 64 bits.
+- Ce guide est prévu pour la dernière version de Raspberry Pi OS 64 bits.
+- Choisir l'édition avec bureau si vous voulez pouvoir revenir au bureau graphique.
 - La Raspberry doit être connectée à Internet pendant l'installation.
-- Sur Bookworm/Trixie, le kiosque utilise Cage. Sur l'ancien Bullseye, le
-  script utilise automatiquement un affichage X11 compatible.
-- Bullseye ne reçoit plus de correctifs de sécurité : ce mode permet les
-  essais, mais une version récente reste nécessaire avant le déploiement final.
+- Bullseye n'est plus pris en charge par ce script.
 - Branchez l'écran, le clavier, le lecteur RFID et de préférence un câble Ethernet.
 - Ne lancez jamais les commandes db:seed, db:push ou db:migrate sur Fouaille.
-- Le dossier peut se trouver sur le Bureau ou dans le dossier personnel : le script
-  copiera ensuite l'installation définitive dans /opt/marco-prime.
+- Le dossier reste à l'endroit où vous l'avez téléchargé.
 
 
 ÉTAPE 1 — VÉRIFIER QUE LE SYSTÈME EST EN 64 BITS
@@ -92,8 +89,23 @@ chmod 600 .env.orange-pi
 chmod +x marco install-raspberry-pi.sh
 
 
-ÉTAPE 5 — CONTRÔLER LA CONFIGURATION
+ÉTAPE 5 — INSTALLER LES DÉPENDANCES
+------------------------------------
+
+sudo ./install-raspberry-pi.sh "$USER"
+
+Cette étape installe Docker, Docker Compose, Chromium et Cage. Elle ne compile
+pas Marco Prime, ne lance pas Docker et ne configure aucun démarrage automatique.
+
+Lorsque l'installation est terminée, redémarrer pour activer l'accès à Docker :
+
+sudo reboot
+
+
+ÉTAPE 6 — CONTRÔLER LA CONFIGURATION
 -------------------------------------
+
+Après le redémarrage, revenir dans le dossier Marco Prime puis taper :
 
 ./marco check
 
@@ -105,26 +117,17 @@ Si une erreur mentionne API_PORT, conserver API_PORT=3000 et modifier seulement
 MARCO_HOST_PORT si le port visible doit changer.
 
 
-ÉTAPE 6 — LANCER L'INSTALLATION AUTOMATIQUE
---------------------------------------------
+ÉTAPE 7 — CONSTRUIRE ET LANCER MARCO MANUELLEMENT
+--------------------------------------------------
 
-sudo ./install-raspberry-pi.sh "$USER"
+./marco start
 
-Cette étape peut prendre plusieurs minutes. Elle installe Docker, Chromium et
-Cage, compile Marco Prime et configure son démarrage automatique.
+Le premier lancement compile l'application et peut prendre plusieurs minutes.
+Ouvrir ensuite Chromium à cette adresse :
 
-Ne pas éteindre ou débrancher la Raspberry pendant cette étape.
+http://127.0.0.1:3001/
 
-
-ÉTAPE 7 — REDÉMARRER LA RASPBERRY
-----------------------------------
-
-Lorsque le message « Installation terminée » apparaît :
-
-sudo reboot
-
-Après le redémarrage, Marco Prime doit apparaître automatiquement en plein écran
-sur la page Home. Il ne doit pas être nécessaire de cliquer sur une icône.
+Marco Prime ne se lancera pas automatiquement au prochain démarrage.
 
 
 ÉTAPE 8 — PREMIER TEST
@@ -144,7 +147,7 @@ COMMANDES UTILES APRÈS INSTALLATION
 
 Voir l'état de Marco :
 
-cd /opt/marco-prime
+cd "$HOME/Desktop/Marco Prime"
 ./marco status
 
 Voir les journaux :
@@ -165,25 +168,12 @@ Relancer Marco :
 
 ./marco start
 
-Vérifier le service de l'application :
-
-sudo systemctl status marco-prime.service --no-pager
-
-Vérifier le kiosque plein écran :
-
-sudo systemctl status marco-kiosk.service --no-pager
-
-
 SI L'ÉCRAN RESTE NOIR OU SI MARCO NE DÉMARRE PAS
 -------------------------------------------------
 
 Afficher les dernières erreurs de l'application :
 
-sudo journalctl -u marco-prime.service -n 100 --no-pager
-
-Afficher les dernières erreurs du kiosque :
-
-sudo journalctl -u marco-kiosk.service -n 100 --no-pager
+./marco logs
 
 Vérifier Docker :
 
@@ -200,11 +190,7 @@ MISE À JOUR PLUS TARD
 Dans le dossier source Marco Prime :
 
 git pull
-sudo ./install-raspberry-pi.sh "$USER"
-
-Puis :
-
-sudo reboot
+./marco rebuild
 
 
 RAPPEL DE SÉCURITÉ
