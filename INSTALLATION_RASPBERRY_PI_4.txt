@@ -1,0 +1,217 @@
+INSTALLATION DE MARCO PRIME SUR RASPBERRY PI 4 MODEL B
+======================================================
+
+IMPORTANT
+---------
+
+- Ce guide est prévu pour Raspberry Pi OS Lite 64 bits.
+- La Raspberry doit être connectée à Internet pendant l'installation.
+- Sur Bookworm/Trixie, le kiosque utilise Cage. Sur l'ancien Bullseye, le
+  script utilise automatiquement un affichage X11 compatible.
+- Bullseye ne reçoit plus de correctifs de sécurité : ce mode permet les
+  essais, mais une version récente reste nécessaire avant le déploiement final.
+- Branchez l'écran, le clavier, le lecteur RFID et de préférence un câble Ethernet.
+- Ne lancez jamais les commandes db:seed, db:push ou db:migrate sur Fouaille.
+- Le dossier peut se trouver sur le Bureau ou dans le dossier personnel : le script
+  copiera ensuite l'installation définitive dans /opt/marco-prime.
+
+
+ÉTAPE 1 — VÉRIFIER QUE LE SYSTÈME EST EN 64 BITS
+------------------------------------------------
+
+Ouvrir un terminal sur la Raspberry et taper :
+
+uname -m
+
+Le résultat doit être :
+
+aarch64
+
+Si le résultat est armv7l, arrêter ici et installer Raspberry Pi OS 64 bits.
+
+
+ÉTAPE 2 — PLACER LE DOSSIER MARCO PRIME
+----------------------------------------
+
+Méthode A — Le dossier « Marco Prime » a été copié sur le Bureau :
+
+cd "$HOME/Desktop/Marco Prime"
+
+Méthode B — Le dossier a été copié directement dans le dossier personnel :
+
+cd "$HOME/Marco Prime"
+
+Vérifier que les fichiers sont présents :
+
+ls
+
+Il faut notamment voir :
+
+- compose.orange-pi.yml
+- Dockerfile.orange-pi
+- install-raspberry-pi.sh
+- marco
+- marco-prime-backend
+- marco-prime-frontend
+
+
+ÉTAPE 3 — VÉRIFIER LE FICHIER DE CONNEXION
+-------------------------------------------
+
+Le fichier .env.orange-pi n'est pas téléchargé depuis GitHub. Il doit être copié
+depuis le Mac dans le dossier Marco Prime.
+
+Vérifier sa présence sans afficher son mot de passe :
+
+ls -l .env.orange-pi
+
+S'il est absent, créer sa base avec :
+
+cp .env.orange-pi.example .env.orange-pi
+nano .env.orange-pi
+
+Vérifier que les lignes suivantes existent :
+
+DATABASE_URL=mysql://UTILISATEUR:MOT_DE_PASSE@HOTE:PORT/BASE
+API_PORT=3000
+MARCO_HOST_PORT=3001
+NODE_ENV=production
+FRONTEND_URL=http://127.0.0.1:3001
+FOUAILLE_SYNC_ENABLED=false
+
+Ne pas mettre le mot de passe MySQL dans le frontend.
+
+Protéger ensuite le fichier :
+
+chmod 600 .env.orange-pi
+
+
+ÉTAPE 4 — RENDRE LES SCRIPTS EXÉCUTABLES
+-----------------------------------------
+
+chmod +x marco install-raspberry-pi.sh
+
+
+ÉTAPE 5 — CONTRÔLER LA CONFIGURATION
+-------------------------------------
+
+./marco check
+
+Le résultat attendu est :
+
+Configuration Marco Prime valide.
+
+Si une erreur mentionne API_PORT, conserver API_PORT=3000 et modifier seulement
+MARCO_HOST_PORT si le port visible doit changer.
+
+
+ÉTAPE 6 — LANCER L'INSTALLATION AUTOMATIQUE
+--------------------------------------------
+
+sudo ./install-raspberry-pi.sh "$USER"
+
+Cette étape peut prendre plusieurs minutes. Elle installe Docker, Chromium et
+Cage, compile Marco Prime et configure son démarrage automatique.
+
+Ne pas éteindre ou débrancher la Raspberry pendant cette étape.
+
+
+ÉTAPE 7 — REDÉMARRER LA RASPBERRY
+----------------------------------
+
+Lorsque le message « Installation terminée » apparaît :
+
+sudo reboot
+
+Après le redémarrage, Marco Prime doit apparaître automatiquement en plein écran
+sur la page Home. Il ne doit pas être nécessaire de cliquer sur une icône.
+
+
+ÉTAPE 8 — PREMIER TEST
+-----------------------
+
+1. Ouvrir Config.
+2. Scanner la carte administrateur, ou saisir son numéro puis appuyer sur Entrée.
+3. Sélectionner deux produits de test.
+4. Appuyer sur Enregistrer.
+5. Revenir sur Home puis ouvrir Achats.
+6. Vérifier que seuls les produits sélectionnés apparaissent.
+7. Utiliser uniquement un membre et des opérations autorisés pour le premier test.
+
+
+COMMANDES UTILES APRÈS INSTALLATION
+------------------------------------
+
+Voir l'état de Marco :
+
+cd /opt/marco-prime
+./marco status
+
+Voir les journaux :
+
+./marco logs
+
+Quitter les journaux avec Ctrl+C.
+
+Redémarrer Marco sans effacer la sélection :
+
+./marco restart
+
+Arrêter Marco :
+
+./marco stop
+
+Relancer Marco :
+
+./marco start
+
+Vérifier le service de l'application :
+
+sudo systemctl status marco-prime.service --no-pager
+
+Vérifier le kiosque plein écran :
+
+sudo systemctl status marco-kiosk.service --no-pager
+
+
+SI L'ÉCRAN RESTE NOIR OU SI MARCO NE DÉMARRE PAS
+-------------------------------------------------
+
+Afficher les dernières erreurs de l'application :
+
+sudo journalctl -u marco-prime.service -n 100 --no-pager
+
+Afficher les dernières erreurs du kiosque :
+
+sudo journalctl -u marco-kiosk.service -n 100 --no-pager
+
+Vérifier Docker :
+
+sudo systemctl status docker --no-pager
+
+Vérifier l'adresse locale depuis un navigateur :
+
+http://127.0.0.1:3001/
+
+
+MISE À JOUR PLUS TARD
+----------------------
+
+Dans le dossier source Marco Prime :
+
+git pull
+sudo ./install-raspberry-pi.sh "$USER"
+
+Puis :
+
+sudo reboot
+
+
+RAPPEL DE SÉCURITÉ
+-------------------
+
+- Ne jamais envoyer .env.orange-pi sur GitHub.
+- Ne jamais exécuter le générateur de fausses données sur Fouaille.
+- Ne pas exposer le port 3001 sur Internet.
+- La sélection des produits reste conservée dans le volume Docker.
+- En cas de paiement au résultat incertain, vérifier le solde avant de recommencer.

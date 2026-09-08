@@ -41,13 +41,35 @@ fi
 
 echo "Installation des composants légers du kiosque..."
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  ca-certificates \
-  cage \
-  chromium \
-  curl \
-  dbus-user-session \
+
+. /etc/os-release
+OS_CODENAME="${VERSION_CODENAME:-unknown}"
+
+COMMON_PACKAGES=(
+  ca-certificates
+  chromium
+  curl
+  dbus-user-session
   rsync
+)
+
+if [[ "${OS_CODENAME}" == "bullseye" ]]; then
+  echo "Bullseye détecté : utilisation du kiosque X11 (Cage n'y est pas disponible)."
+  KIOSK_DISPLAY_STACK="x11"
+  KIOSK_PACKAGES=(
+    unclutter
+    x11-xserver-utils
+    xinit
+    xserver-xorg
+  )
+else
+  KIOSK_DISPLAY_STACK="wayland"
+  KIOSK_PACKAGES=(cage)
+fi
+
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  "${COMMON_PACKAGES[@]}" \
+  "${KIOSK_PACKAGES[@]}"
 
 if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
   echo "Installation de Docker Engine et du plugin Compose..."
@@ -56,7 +78,6 @@ if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>
     -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
 
-  . /etc/os-release
   DOCKER_CODENAME="${VERSION_CODENAME:-trixie}"
   DOCKER_ARCH="$(dpkg --print-architecture)"
   printf '%s\n' \
@@ -116,7 +137,42 @@ TimeoutStopSec=45
 WantedBy=multi-user.target
 UNIT
 
-cat > /usr/local/bin/marco-kiosk-launch <<'LAUNCHER'
+if [[ "${KIOSK_DISPLAY_STACK}" == "x11" ]]; then
+  cat > /usr/local/bin/marco-chromium <<'CHROMIUM'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+xset s off
+xset -dpms
+xset s noblank
+unclutter -idle 0.1 -root &
+
+exec /usr/bin/chromium \
+  --kiosk \
+  --noerrdialogs \
+  --no-first-run \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-pinch \
+  --overscroll-history-navigation=0 \
+  http://127.0.0.1:3001/
+CHROMIUM
+  chmod 755 /usr/local/bin/marco-chromium
+
+  cat > /usr/local/bin/marco-kiosk-launch <<'LAUNCHER'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+until curl --fail --silent --show-error --max-time 3 \
+  http://127.0.0.1:3001/ready >/dev/null; do
+  sleep 2
+done
+
+exec /usr/bin/xinit /usr/local/bin/marco-chromium -- \
+  :0 vt1 -nolisten tcp
+LAUNCHER
+else
+  cat > /usr/local/bin/marco-kiosk-launch <<'LAUNCHER'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
@@ -136,9 +192,10 @@ exec /usr/bin/cage -- /usr/bin/chromium \
   --overscroll-history-navigation=0 \
   http://127.0.0.1:3001/
 LAUNCHER
+fi
 chmod 755 /usr/local/bin/marco-kiosk-launch
 
-cat > /etc/pam.d/cage <<'PAM'
+cat > /etc/pam.d/marco-kiosk <<'PAM'
 auth       required pam_unix.so nullok
 account    required pam_unix.so
 session    required pam_unix.so
@@ -159,7 +216,7 @@ ConditionPathExists=/dev/tty0
 Type=simple
 User=${KIOSK_USER}
 SupplementaryGroups=video render input
-PAMName=cage
+PAMName=marco-kiosk
 UtmpIdentifier=tty1
 UtmpMode=user
 TTYPath=/dev/tty1
