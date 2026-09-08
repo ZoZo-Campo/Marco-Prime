@@ -1,24 +1,25 @@
 import z from "zod";
 import { paginationSchema } from "./product.schema";
+import { moneyStringSchema } from "./money.schema";
 
 export const orderSchema = z.object({
-  id: z.coerce.number(),
+  id: z.coerce.number().int().positive(),
   product: z
     .object({
-      id: z.coerce.number(),
+      id: z.coerce.number().int().positive(),
       name: z.string(),
     })
     .nullable(),
   member: z
     .object({
-      id: z.coerce.number(),
+      id: z.coerce.number().int().positive(),
       firstName: z.string(),
       lastName: z.string(),
     })
     .nullable(),
-  price: z.string(),
-  amount: z.coerce.number(),
-  date: z.string(),
+  price: moneyStringSchema,
+  amount: z.coerce.number().int().positive(),
+  date: z.string().datetime(),
 });
 
 export const orderListResponseSchema = z.object({

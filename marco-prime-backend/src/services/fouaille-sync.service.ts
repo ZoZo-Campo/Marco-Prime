@@ -7,7 +7,10 @@ const fouailleProductSchema = z.object({
   id: z.number().int().positive(),
   name: z.string().min(1).max(50),
   title: z.string().min(1).max(25),
-  price: z.string().regex(/^\d+(?:\.\d{1,2})?$/),
+  price: z
+    .string()
+    .regex(/^\d+(?:\.\d{1,2})?$/)
+    .refine((price) => Number(price) > 0),
   color: z.string().nullable().optional(),
 });
 
@@ -44,6 +47,12 @@ export async function synchronizeFouailleCatalog(): Promise<FouailleSyncResult> 
   }
 
   const catalog = parseFouailleCatalog(await response.json());
+  if (
+    catalog.data.length === 0 ||
+    catalog.data.every((category) => category.products.length === 0)
+  ) {
+    throw new Error("Fouaille API returned an empty catalog");
+  }
   const synchronizedProductIds = new Set<number>();
 
   await db.transaction(async (tx) => {
@@ -106,7 +115,9 @@ export async function synchronizeFouailleCatalog(): Promise<FouailleSyncResult> 
 }
 
 export function startFouailleSynchronization() {
-  if (process.env.FOUAILLE_SYNC_ENABLED === "false") return;
+  // Synchronization can write product data. It must therefore be explicitly
+  // enabled; a missing or misspelled variable keeps the remote DB untouched.
+  if (process.env.FOUAILLE_SYNC_ENABLED !== "true") return;
 
   const configuredInterval = Number.parseInt(
     process.env.FOUAILLE_SYNC_INTERVAL_MS || "300000",
@@ -116,7 +127,10 @@ export function startFouailleSynchronization() {
     ? Math.max(configuredInterval, 60_000)
     : 300_000;
 
+  let synchronizationInProgress = false;
   const synchronize = async () => {
+    if (synchronizationInProgress) return;
+    synchronizationInProgress = true;
     try {
       const result = await synchronizeFouailleCatalog();
       console.log(
@@ -127,6 +141,8 @@ export function startFouailleSynchronization() {
         "Fouaille catalog synchronization failed; keeping the local catalog",
         error,
       );
+    } finally {
+      synchronizationInProgress = false;
     }
   };
 

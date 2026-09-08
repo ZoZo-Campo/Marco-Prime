@@ -17,5 +17,11 @@ export const memberSchema = z.object({
 });
 
 export const cardNumberParamSchema = z.object({
-  card_number: z.string().regex(/^\d+$/).transform(Number),
+  card_number: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .refine((value) => Number.isSafeInteger(value) && value > 0, {
+      message: "Card number must be a positive safe integer",
+    }),
 });

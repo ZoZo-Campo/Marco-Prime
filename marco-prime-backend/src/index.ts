@@ -29,7 +29,7 @@ export const app = new Hono()
     origin: allowedFrontendOrigins,
     credentials: true,
   }))
-  .use("*", limiter)
+  .use("/api/v1/*", limiter)
   .get("/health", (c) =>
     c.json({
       status: "ok",

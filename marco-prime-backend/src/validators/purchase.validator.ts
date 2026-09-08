@@ -7,7 +7,7 @@ export const purchaseItemSchema = z.object({
 
 export const purchaseRequestSchema = z.object({
   transactionId: z.string().uuid(),
-  cardNumber: z.number().positive(),
+  cardNumber: z.number().int().positive().safe(),
   items: z
     .array(purchaseItemSchema)
     .min(1)

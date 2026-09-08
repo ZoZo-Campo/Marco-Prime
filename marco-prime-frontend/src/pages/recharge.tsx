@@ -1,4 +1,3 @@
-import { signal } from "@preact/signals";
 import { useLocation } from "preact-iso";
 import { useEffect } from "preact/hooks";
 import { AlertTriangle, Loader2, CreditCard } from "lucide-preact";
@@ -11,18 +10,22 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { TICKET_ROUTE_URL } from "./ticket";
 import { apiHeaders, apiUrl } from "../config/api";
+import {
+  pendingRechargeSignal,
+  rechargeAmountSignal,
+  rechargeErrorSignal,
+  rechargeInProgressSignal,
+  rechargeInteractionLockedSignal,
+  resetRechargeState,
+  waitingForAdminSignal,
+  type PendingRecharge,
+} from "../contexts/recharge-state";
 
 export const RECHARGE_ROUTE_URL = "/recharge";
 
-const amountSignal = signal("");
-const isLoadingSignal = signal(false);
-const waitingForAdminSignal = signal(false);
-const rechargeErrorSignal = signal<string | null>(null);
-const pendingRechargeTransactionId = signal<string | null>(null);
-
 export function RechargePage() {
   return (
-    <MemberProvider>
+    <MemberProvider disabled={rechargeInteractionLockedSignal.value}>
       <RechargeContent />
     </MemberProvider>
   );
@@ -45,11 +48,7 @@ function RechargeContent() {
   });
 
   useEffect(() => {
-    amountSignal.value = "";
-    isLoadingSignal.value = false;
-    waitingForAdminSignal.value = false;
-    rechargeErrorSignal.value = null;
-    pendingRechargeTransactionId.value = null;
+    resetRechargeState();
     resume();
   }, []);
 
@@ -61,81 +60,91 @@ function RechargeContent() {
   }, [adminCardNumber, waitingForAdminSignal.value]);
 
   const processRecharge = async (adminCard?: number) => {
-    if (!member || !amountSignal.value) return;
+    if (rechargeInProgressSignal.value) return;
 
-    isLoadingSignal.value = true;
+    let rechargeRequest = pendingRechargeSignal.value;
+    if (!rechargeRequest) {
+      if (!member || !rechargeAmountSignal.value) return;
+      const adminCardNumber =
+        adminCard ?? (member.admin ? member.cardNumber : undefined);
+      if (!member.admin && !adminCardNumber) return;
+
+      rechargeRequest = {
+        transactionId: crypto.randomUUID(),
+        cardNumber: member.cardNumber,
+        amount: Number(rechargeAmountSignal.value),
+        ...(adminCardNumber ? { adminCardNumber } : {}),
+      } satisfies PendingRecharge;
+      pendingRechargeSignal.value = rechargeRequest;
+    }
+
+    waitingForAdminSignal.value = false;
+    resume();
+    rechargeInProgressSignal.value = true;
     rechargeErrorSignal.value = null;
 
     try {
-      // If member is admin, use their own card as admin card
-      const adminCardNumber = adminCard ?? (member.admin ? member.cardNumber : undefined);
-
-      const body: Record<string, unknown> = {
-        transactionId:
-          pendingRechargeTransactionId.value ?? crypto.randomUUID(),
-        cardNumber: member.cardNumber,
-        amount: Number(amountSignal.value),
-      };
-      pendingRechargeTransactionId.value = body.transactionId as string;
-
-      if (adminCardNumber) {
-        body.adminCardNumber = adminCardNumber;
-      }
-
       const response = await fetch(apiUrl("recharge"), {
         method: "POST",
         headers: apiHeaders({
           "Content-Type": "application/json",
         }),
-        body: JSON.stringify(body),
+        body: JSON.stringify(rechargeRequest),
         signal: AbortSignal.timeout(15_000),
       });
 
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        if (response.status < 500) {
-          pendingRechargeTransactionId.value = null;
-        }
-        throw new Error(
+        const message =
           payload && typeof payload.error === "string"
             ? payload.error
-            : `Rechargement refusé (erreur ${response.status})`,
-        );
+            : `Rechargement refusé (erreur ${response.status})`;
+        if (response.status >= 400 && response.status < 500) {
+          pendingRechargeSignal.value = null;
+          rechargeErrorSignal.value = message;
+        } else {
+          rechargeErrorSignal.value =
+            `${message}. Résultat incertain : utilisez Réessayer.`;
+        }
+        return;
       }
 
-      const json = await response.json();
-      const result = rechargeResponseSchema.parse(json);
+      const result = rechargeResponseSchema.parse(await response.json());
+      if (
+        result.transaction.transactionId !== rechargeRequest.transactionId
+      ) {
+        throw new Error("Le serveur a répondu avec une autre transaction");
+      }
 
       setTicket({
         type: "recharge",
         transaction: result.transaction,
       });
 
-      amountSignal.value = "";
-      pendingRechargeTransactionId.value = null;
+      rechargeAmountSignal.value = "";
+      pendingRechargeSignal.value = null;
       waitingForAdminSignal.value = false;
-      isLoadingSignal.value = false;
       resume();
       route(TICKET_ROUTE_URL);
       clearMember();
     } catch (error) {
       console.error("Erreur de rechargement:", error);
-      rechargeErrorSignal.value =
-        error instanceof DOMException && error.name === "TimeoutError"
-          ? "Connexion perdue. Le résultat est incertain : vérifiez le solde avant de recommencer."
-          : error instanceof TypeError
-            ? "Connexion au serveur impossible. Réessayez lorsque le réseau est revenu."
-            : error instanceof Error
-              ? error.message
-              : "Le rechargement a échoué.";
-      isLoadingSignal.value = false;
+      rechargeErrorSignal.value = error instanceof Error
+        ? `${error.message}. Résultat incertain : utilisez Réessayer.`
+        : "Connexion perdue. Résultat incertain : utilisez Réessayer.";
       waitingForAdminSignal.value = false;
       resume();
+    } finally {
+      rechargeInProgressSignal.value = false;
     }
   };
 
   const handleRecharge = () => {
-    if (!member || !amountSignal.value) return;
+    if (pendingRechargeSignal.value) {
+      void processRecharge();
+      return;
+    }
+    if (!member || !rechargeAmountSignal.value) return;
 
     if (member.admin) {
       // Member is admin, no need for separate admin card
@@ -151,10 +160,15 @@ function RechargeContent() {
     resume();
   };
 
-  const amount = amountSignal.value ? Number(amountSignal.value) : 0;
+  const amount = pendingRechargeSignal.value?.amount ?? (
+    rechargeAmountSignal.value ? Number(rechargeAmountSignal.value) : 0
+  );
   const currentBalance = member ? Number(member.balance) : 0;
   const newBalance = currentBalance + amount;
-  const canRecharge = member && amount > 0 && !isLoadingSignal.value;
+  const canRecharge = Boolean(
+    !rechargeInProgressSignal.value &&
+      (pendingRechargeSignal.value || (member && amount > 0)),
+  );
 
   return (
     <div class="grid grid-cols-[1fr_300px] flex-1 min-h-0 overflow-hidden">
@@ -166,8 +180,9 @@ function RechargeContent() {
         </p>
         <div class="w-72">
           <Keypad
-            value={amountSignal.value}
-            onChange={(v) => (amountSignal.value = v)}
+            value={rechargeAmountSignal.value}
+            onChange={(v) => (rechargeAmountSignal.value = v)}
+            disabled={rechargeInteractionLockedSignal.value}
           />
         </div>
       </div>
@@ -245,10 +260,10 @@ function RechargeContent() {
 
         {/* Recharge button */}
         <Button class="h-12" disabled={!canRecharge} onClick={handleRecharge}>
-          {isLoadingSignal.value ? (
+          {rechargeInProgressSignal.value ? (
             <Loader2 class="size-5 animate-spin" />
           ) : (
-            `${pendingRechargeTransactionId.value ? "Réessayer" : "Recharger"} ${amount.toFixed(2)} €`
+            `${pendingRechargeSignal.value ? "Réessayer" : "Recharger"} ${amount.toFixed(2)} €`
           )}
         </Button>
       </aside>

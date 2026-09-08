@@ -2,6 +2,7 @@ import type { ProductSchema } from "../../../schemas/product.schema";
 import { useMember } from "../../../contexts/member-context";
 import { cn } from "../../../utils/cn";
 import { closestColor } from "../../../utils/colors";
+import { purchaseInteractionLockedSignal } from "../../../contexts/purchase-state";
 
 interface ProductItemProps {
   product: ProductSchema;
@@ -25,7 +26,7 @@ export function ProductItem({ product, amount, onClick }: ProductItemProps) {
         " border justify-center items-center disabled:cursor-default cursor-pointer flex flex-col gap-3 hover:brightness-90 select-none text-card-foreground disabled:opacity-50 disabled:border-border",
       )}
       onClick={onClick}
-      disabled={!data}
+      disabled={!data || purchaseInteractionLockedSignal.value}
     >
       <span class="text-xl font-semibold text-center line-clamp-2">
         {product.name}

@@ -5,9 +5,15 @@ interface KeypadProps {
   value: string;
   onChange: (value: string) => void;
   maxLength?: number;
+  disabled?: boolean;
 }
 
-export function Keypad({ value, onChange, maxLength = 6 }: KeypadProps) {
+export function Keypad({
+  value,
+  onChange,
+  maxLength = 6,
+  disabled = false,
+}: KeypadProps) {
   const handleDigit = (digit: string) => {
     if (value.length < maxLength) {
       onChange(value + digit);
@@ -31,6 +37,7 @@ export function Keypad({ value, onChange, maxLength = 6 }: KeypadProps) {
           size="lg"
           class="text-2xl font-bold h-14"
           onClick={() => handleDigit(digit)}
+          disabled={disabled}
         >
           {digit}
         </Button>
@@ -40,6 +47,7 @@ export function Keypad({ value, onChange, maxLength = 6 }: KeypadProps) {
         size="lg"
         class="text-sm font-bold h-14"
         onClick={handleClear}
+        disabled={disabled}
       >
         CLR
       </Button>
@@ -48,6 +56,7 @@ export function Keypad({ value, onChange, maxLength = 6 }: KeypadProps) {
         size="lg"
         class="text-2xl font-bold h-14"
         onClick={() => handleDigit("0")}
+        disabled={disabled}
       >
         0
       </Button>
@@ -56,6 +65,7 @@ export function Keypad({ value, onChange, maxLength = 6 }: KeypadProps) {
         size="lg"
         class="h-14"
         onClick={handleDelete}
+        disabled={disabled}
       >
         <Delete class="size-6" />
       </Button>

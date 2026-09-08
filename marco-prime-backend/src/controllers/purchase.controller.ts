@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { MemberRepository } from "../repositories/member.repository.js";
 import { OrderRepository } from "../repositories/order.repository.js";
 import { catalogSelectionService } from "../services/catalog-selection.service.js";
+import { auditEvent } from "../config/logger.js";
 import {
   purchaseReceiptSchema,
   purchaseRequestSchema,
@@ -105,11 +106,19 @@ export class PurchaseController {
             message: "A product is no longer available on this Marco",
           });
         }
+        if (
+          error.message.startsWith("INVALID_PRODUCT_PRICE:") ||
+          error.message === "INVALID_PURCHASE_TOTAL"
+        ) {
+          throw new HTTPException(400, {
+            message: "Un produit possède un prix invalide",
+          });
+        }
       }
       throw error;
     }
 
-    return {
+    const receipt = {
       success: true,
       transaction: {
         transactionId,
@@ -127,6 +136,17 @@ export class PurchaseController {
         newBalance: purchase.newBalance,
       },
     } satisfies PurchaseReceiptDTO;
+
+    auditEvent("purchase.completed", {
+      transactionId,
+      memberId: member.id,
+      orderIds: purchase.orderIds,
+      previousBalance: purchase.previousBalance,
+      amount: `-${purchase.totalPrice}`,
+      newBalance: purchase.newBalance,
+    });
+
+    return receipt;
   }
 }
 

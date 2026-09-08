@@ -1,6 +1,6 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { db } from "../../src/config/database.js";
-import { members, products } from "../../src/db/schema.js";
+import { members, orders, products } from "../../src/db/schema.js";
 
 export const authenticatedOptions = {
   headers: {
@@ -81,6 +81,22 @@ export const getBalanceByCardNumber = async (cardNumber: number) => {
 
   if (!member) throw new Error("Member not found.");
   return member.balance;
+};
+
+export const getOrderById = async (orderId: number) => {
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1);
+
+  if (!order) throw new Error("Order not found.");
+  return order;
+};
+
+export const getOrderCount = async () => {
+  const [{ total }] = await db.select({ total: count() }).from(orders);
+  return total;
 };
 
 export const getUnavailableProductId = async () => {

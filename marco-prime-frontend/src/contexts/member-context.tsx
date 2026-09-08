@@ -26,19 +26,27 @@ export function useMember() {
   return context;
 }
 
-export function MemberProvider({ children }: PropsWithChildren) {
+export function MemberProvider({
+  children,
+  disabled = false,
+}: PropsWithChildren<{ disabled?: boolean }>) {
   const [paused, setPaused] = useState(false);
   const {
     value: memberCardId,
     scanId,
     inputLength,
     clear: clearRfid,
-  } = useRfid({ disabled: paused });
-  const { data, loading, error, refetch, reset } = useApi(
+  } = useRfid({ disabled: paused || disabled });
+  const { data: fetchedMember, loading, error, refetch, reset } = useApi(
     memberSchema,
     apiUrl(`member/${memberCardId}`),
     { immediate: false },
   );
+  const data =
+    memberCardId !== undefined &&
+    fetchedMember?.cardNumber === Number(memberCardId)
+      ? fetchedMember
+      : null;
 
   useEffect(() => {
     if (memberCardId) refetch();

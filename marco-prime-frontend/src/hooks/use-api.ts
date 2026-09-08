@@ -46,6 +46,7 @@ export function useApi<T>(
 
     setLoading(true);
     setError(null);
+    setData(null);
 
     try {
       const res = await fetch(url, {

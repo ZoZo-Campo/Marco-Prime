@@ -25,14 +25,18 @@ export const paginationQuerySchema = z.object({
     .string()
     .regex(/^\d+$/)
     .transform(Number)
-    .refine((val) => val >= 1, { message: "Page must be >= 1" })
+    .refine((val) => val >= 1 && val <= 100_000, {
+      message: "Page must be between 1 and 100000",
+    })
     .optional()
     .default(1),
   limit: z
     .string()
     .regex(/^\d+$/)
     .transform(Number)
-    .refine((val) => val >= 1, { message: "Limit must be >= 1" })
+    .refine((val) => val >= 1 && val <= 100, {
+      message: "Limit must be between 1 and 100",
+    })
     .optional()
     .default(20),
 });

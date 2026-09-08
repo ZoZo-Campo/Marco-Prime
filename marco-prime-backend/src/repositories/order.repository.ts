@@ -33,26 +33,6 @@ export class OrderRepository {
       .orderBy(desc(orders.date));
   }
 
-  async create(data: {
-    productId: number;
-    memberId: number;
-    price: string;
-    amount: number;
-  }) {
-    const [order] = await db.insert(orders).values(data).$returningId();
-    return order;
-  }
-
-  async findById(orderId: number) {
-    const [order] = await db
-      .select()
-      .from(orders)
-      .where(eq(orders.id, orderId))
-      .limit(1);
-
-    return order;
-  }
-
   async createCartPurchaseTransaction(
     memberId: number,
     requestedItems: Array<{ productId: number; amount: number }>,
@@ -111,7 +91,17 @@ export class OrderRepository {
         if (selectedSet && !selectedSet.has(item.productId)) {
           throw new Error(`PRODUCT_NOT_SELECTED:${item.productId}`);
         }
-        const lineTotalCents = toCents(product.price) * item.amount;
+        const unitPriceCents = toCents(product.price);
+        if (unitPriceCents === null || unitPriceCents <= 0) {
+          throw new Error(`INVALID_PRODUCT_PRICE:${item.productId}`);
+        }
+        const lineTotalCents = unitPriceCents * item.amount;
+        if (
+          !Number.isSafeInteger(lineTotalCents) ||
+          lineTotalCents > MAX_DATABASE_MONEY_CENTS
+        ) {
+          throw new Error(`INVALID_PRODUCT_PRICE:${item.productId}`);
+        }
         return {
           product: {
             id: product.id,
@@ -121,15 +111,41 @@ export class OrderRepository {
           },
           amount: item.amount,
           totalPrice: fromCents(lineTotalCents),
+          ledgerPrice: fromCents(-lineTotalCents),
+          lineTotalCents,
         };
       });
 
       const totalCents = receiptItems.reduce(
-        (total, item) => total + toCents(item.totalPrice),
+        (total, item) => total + item.lineTotalCents,
         0,
       );
+      if (
+        !Number.isSafeInteger(totalCents) ||
+        totalCents <= 0 ||
+        totalCents > MAX_DATABASE_MONEY_CENTS
+      ) {
+        throw new Error("INVALID_PURCHASE_TOTAL");
+      }
+
       const currentBalanceCents = toCents(lockedMember.balance);
-      const newBalance = fromCents(currentBalanceCents - totalCents);
+      if (currentBalanceCents === null) {
+        throw new Error("INVALID_MEMBER_BALANCE");
+      }
+      const newBalanceCents = currentBalanceCents - totalCents;
+      const ledgerTotalCents = receiptItems.reduce(
+        (total, item) => total - item.lineTotalCents,
+        0,
+      );
+      if (
+        newBalanceCents >= currentBalanceCents ||
+        ledgerTotalCents !== -totalCents ||
+        currentBalanceCents + ledgerTotalCents !== newBalanceCents ||
+        Math.abs(newBalanceCents) > MAX_DATABASE_MONEY_CENTS
+      ) {
+        throw new Error("INVALID_MEMBER_BALANCE");
+      }
+      const newBalance = fromCents(newBalanceCents);
 
       const orderIds: number[] = [];
       for (const item of receiptItems) {
@@ -138,7 +154,8 @@ export class OrderRepository {
           .values({
             productId: item.product.id,
             memberId,
-            price: item.product.price,
+            // Fouaille stores a signed line total: purchases are negative.
+            price: item.ledgerPrice,
             amount: item.amount,
           })
           .$returningId();
@@ -162,14 +179,97 @@ export class OrderRepository {
         previousBalance: lockedMember.balance,
         newBalance,
         totalPrice: fromCents(totalCents),
-        items: receiptItems,
+        items: receiptItems.map((item) => ({
+          product: item.product,
+          amount: item.amount,
+          totalPrice: item.totalPrice,
+        })),
+      };
+    });
+  }
+
+  async createRechargeTransaction(
+    memberId: number,
+    amount: number,
+  ): Promise<{
+    orderId: number;
+    orderDate: Date;
+    previousBalance: string;
+    newBalance: string;
+  }> {
+    return await db.transaction(async (tx) => {
+      const amountCents = toCents(amount.toFixed(2));
+      if (
+        amountCents === null ||
+        amountCents <= 0 ||
+        amountCents > MAX_DATABASE_MONEY_CENTS
+      ) {
+        throw new Error("INVALID_RECHARGE_AMOUNT");
+      }
+
+      const [lockedMember] = await tx
+        .select({ balance: members.balance })
+        .from(members)
+        .where(eq(members.id, memberId))
+        .limit(1)
+        .for("update");
+
+      if (!lockedMember) throw new Error("Member not found during recharge");
+
+      const currentBalanceCents = toCents(lockedMember.balance);
+      if (currentBalanceCents === null) {
+        throw new Error("INVALID_MEMBER_BALANCE");
+      }
+      const newBalanceCents = currentBalanceCents + amountCents;
+      if (
+        newBalanceCents <= currentBalanceCents ||
+        currentBalanceCents + amountCents !== newBalanceCents ||
+        Math.abs(newBalanceCents) > MAX_DATABASE_MONEY_CENTS
+      ) {
+        throw new Error("INVALID_MEMBER_BALANCE");
+      }
+      const newBalance = fromCents(newBalanceCents);
+
+      const [order] = await tx
+        .insert(orders)
+        .values({
+          productId: null,
+          memberId,
+          // Fouaille stores recharges as positive ledger entries.
+          price: fromCents(amountCents),
+          amount: 1,
+        })
+        .$returningId();
+
+      await tx
+        .update(members)
+        .set({ balance: newBalance })
+        .where(eq(members.id, memberId));
+
+      const [createdOrder] = await tx
+        .select({ date: orders.date })
+        .from(orders)
+        .where(eq(orders.id, order.id))
+        .limit(1);
+
+      if (!createdOrder) throw new Error("Recharge ledger entry not found");
+
+      return {
+        orderId: order.id,
+        orderDate: createdOrder.date,
+        previousBalance: lockedMember.balance,
+        newBalance,
       };
     });
   }
 }
 
-function toCents(value: string) {
-  return Math.round(Number.parseFloat(value) * 100);
+const MAX_DATABASE_MONEY_CENTS = 9_999_999_999;
+
+function toCents(value: string): number | null {
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) return null;
+  const cents = Math.round(Number(value) * 100);
+  return Number.isSafeInteger(cents) ? cents : null;
 }
 
 function fromCents(value: number) {

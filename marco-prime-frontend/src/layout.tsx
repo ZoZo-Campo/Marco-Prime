@@ -5,6 +5,14 @@ import { NavBar } from "./components/layout/navbar";
 import { shopping } from "./contexts/shopping-context";
 import { clearTicket } from "./contexts/ticket-context";
 import { HOME_ROUTE_URL } from "./pages/home";
+import {
+  purchaseInteractionLockedSignal,
+  resetPurchaseState,
+} from "./contexts/purchase-state";
+import {
+  rechargeInteractionLockedSignal,
+  resetRechargeState,
+} from "./contexts/recharge-state";
 
 type LayoutProps = PropsWithChildren;
 
@@ -15,7 +23,16 @@ export function Layout({ children }: LayoutProps) {
     let timeout = window.setTimeout(resetSession, 120_000);
 
     function resetSession() {
+      if (
+        purchaseInteractionLockedSignal.value ||
+        rechargeInteractionLockedSignal.value
+      ) {
+        timeout = window.setTimeout(resetSession, 120_000);
+        return;
+      }
       shopping.reset();
+      resetPurchaseState();
+      resetRechargeState();
       clearTicket();
       route(HOME_ROUTE_URL);
     }

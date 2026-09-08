@@ -6,6 +6,8 @@ import {
   getBalanceByCardNumber,
   getAdminCardNumber,
   getNonAdminCardNumber,
+  getOrderById,
+  getOrderCount,
 } from "./utils/helpers.js";
 
 describe("Recharge Endpoint", async () => {
@@ -36,6 +38,16 @@ describe("Recharge Endpoint", async () => {
     expect(data.transaction).toHaveProperty("amount");
     expect(data.transaction).toHaveProperty("previousBalance");
     expect(data.transaction).toHaveProperty("newBalance");
+
+    expect(toCents(data.transaction.newBalance)).toBe(
+      toCents(data.transaction.previousBalance) +
+        toCents(data.transaction.amount),
+    );
+
+    const ledgerOrder = await getOrderById(data.transaction.orderId);
+    expect(ledgerOrder.productId).toBeNull();
+    expect(ledgerOrder.amount).toBe(1);
+    expect(toCents(ledgerOrder.price)).toBe(toCents(data.transaction.amount));
   });
 
   it("should create a recharge successfully when member is admin", async () => {
@@ -76,6 +88,35 @@ describe("Recharge Endpoint", async () => {
     expect(retry.status).toBe(200);
     expect(await retry.json()).toEqual(await first.json());
     expect(balanceAfterRetry).toBe(balanceAfterFirst);
+  });
+
+  it("should coalesce two simultaneous recharge requests", async () => {
+    const transactionId = crypto.randomUUID();
+    const balanceBefore = await getBalanceByCardNumber(nonAdminCardNumber);
+    const orderCountBefore = await getOrderCount();
+    const request = {
+      json: {
+        transactionId,
+        cardNumber: nonAdminCardNumber,
+        adminCardNumber,
+        amount: 3.75,
+      },
+    };
+
+    const [first, duplicate] = await Promise.all([
+      client.api.v1.recharge.$post(request, authenticatedOptions),
+      client.api.v1.recharge.$post(request, authenticatedOptions),
+    ]);
+    const firstReceipt = await first.json();
+    const duplicateReceipt = await duplicate.json();
+
+    expect(first.status).toBe(201);
+    expect(duplicate.status).toBe(201);
+    expect(duplicateReceipt).toEqual(firstReceipt);
+    expect(await getOrderCount()).toBe(orderCountBefore + 1);
+    expect(toCents(await getBalanceByCardNumber(nonAdminCardNumber))).toBe(
+      toCents(balanceBefore) + toCents(firstReceipt.transaction.amount),
+    );
   });
 
   it("should reject a reused transaction identifier with different data", async () => {
@@ -190,3 +231,7 @@ describe("Recharge Endpoint", async () => {
     expect(res.status).toBe(401);
   });
 });
+
+function toCents(value: string) {
+  return Math.round(Number(value) * 100);
+}

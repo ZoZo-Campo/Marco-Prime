@@ -2,6 +2,8 @@ import type { Context } from "hono";
 import type { z } from "zod";
 import { HTTPException } from "hono/http-exception";
 import { MemberRepository } from "../repositories/member.repository.js";
+import { OrderRepository } from "../repositories/order.repository.js";
+import { auditEvent } from "../config/logger.js";
 import {
   rechargeReceiptSchema,
   rechargeRequestSchema,
@@ -24,6 +26,7 @@ const MAX_COMPLETED_RECHARGES = 1_000;
 
 export class RechargeController {
   private memberRepository = new MemberRepository();
+  private orderRepository = new OrderRepository();
 
   async createRecharge(c: Context) {
     const request = c.req.valid(
@@ -107,16 +110,17 @@ export class RechargeController {
     }
 
     const rechargeAmount = parseFloat(amount.toFixed(2));
-    const balances = await this.memberRepository.addBalanceInTransaction(
+    const recharge = await this.orderRepository.createRechargeTransaction(
       member.id,
       rechargeAmount,
     );
 
-    return {
+    const receipt = {
       success: true,
       transaction: {
         transactionId,
-        date: new Date(),
+        orderId: recharge.orderId,
+        date: recharge.orderDate,
         member: {
           id: member.id,
           firstName: member.firstName,
@@ -133,10 +137,22 @@ export class RechargeController {
             }
           : undefined,
         amount: rechargeAmount.toFixed(2),
-        previousBalance: balances.previousBalance,
-        newBalance: balances.newBalance,
+        previousBalance: recharge.previousBalance,
+        newBalance: recharge.newBalance,
       },
     } satisfies RechargeReceiptDTO;
+
+    auditEvent("recharge.completed", {
+      transactionId,
+      memberId: member.id,
+      orderId: recharge.orderId,
+      previousBalance: recharge.previousBalance,
+      amount: rechargeAmount.toFixed(2),
+      newBalance: recharge.newBalance,
+      processedByMemberId: adminMember?.id ?? member.id,
+    });
+
+    return receipt;
   }
 }
 

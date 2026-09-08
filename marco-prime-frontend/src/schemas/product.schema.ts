@@ -1,4 +1,5 @@
 import z from "zod";
+import { positiveMoneyStringSchema } from "./money.schema";
 
 // Schema pour les types de produits
 export const productTypeSchema = z.object({
@@ -12,8 +13,8 @@ export const productSchema = z.object({
   id: z.coerce.number(),
   title: z.string(),
   name: z.string(),
-  color: z.string(),
-  price: z.string(),
+  color: z.string().nullable().transform((color) => color ?? "#64748b"),
+  price: positiveMoneyStringSchema,
   productTypeId: z.coerce.number(),
   available: z.coerce.boolean(),
 });
@@ -36,8 +37,8 @@ export const catalogSelectionProductSchema = z.object({
   id: z.coerce.number(),
   title: z.string(),
   name: z.string(),
-  color: z.string(),
-  price: z.string(),
+  color: z.string().nullable().transform((color) => color ?? "#64748b"),
+  price: positiveMoneyStringSchema,
   productTypeId: z.coerce.number(),
   productType: z.string(),
   enabledOnMarco: z.coerce.boolean(),

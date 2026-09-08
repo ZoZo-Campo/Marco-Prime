@@ -11,3 +11,22 @@ export function customLogger(message: string, ...rest: string[]) {
   );
   console.log(sanitizedMessage, ...sanitizedRest);
 }
+
+export function auditEvent(
+  event: "purchase.completed" | "recharge.completed",
+  details: Record<string, unknown>,
+) {
+  if (process.env.NODE_ENV === "test") return;
+  try {
+    console.log(
+      JSON.stringify({
+        level: "audit",
+        event,
+        occurredAt: new Date().toISOString(),
+        ...details,
+      }),
+    );
+  } catch {
+    // A logging failure must never turn a committed payment into a retry.
+  }
+}

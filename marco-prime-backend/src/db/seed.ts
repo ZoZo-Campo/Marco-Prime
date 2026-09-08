@@ -134,7 +134,8 @@ async function main() {
       columns: {
         productId: f.int({ minValue: 1, maxValue: 20 }),
         memberId: f.int({ minValue: 1, maxValue: 30 }),
-        price: f.number({ minValue: 0.5, maxValue: 8, precision: 100 }),
+        // Fouaille stores purchase line totals as negative ledger amounts.
+        price: f.number({ minValue: -40, maxValue: -0.5, precision: 100 }),
         amount: f.int({ minValue: 1, maxValue: 5 }),
         date: f.date({ minDate: "2024-01-01", maxDate: "2026-01-13" }),
       },
