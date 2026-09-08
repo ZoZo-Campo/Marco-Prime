@@ -9,6 +9,13 @@ const RFID_MAX_KEY_INTERVAL_MS = 100;
 const RFID_END_DELAY_MS = 180;
 const MANUAL_INPUT_TIMEOUT_MS = 5_000;
 
+function digitFromKeyboardEvent(event: KeyboardEvent) {
+  if (/^\d$/.test(event.key)) return event.key;
+
+  const physicalDigit = /^(?:Digit|Numpad)(\d)$/.exec(event.code);
+  return physicalDigit?.[1];
+}
+
 export function useRfid(options: UseRfidOptions = {}) {
   const { disabled = false } = options;
   const [value, setValue] = useState<string | undefined>(undefined);
@@ -71,7 +78,8 @@ export function useRfid(options: UseRfidOptions = {}) {
         return;
       }
 
-      if (/^\d$/.test(event.key)) {
+      const digit = digitFromKeyboardEvent(event);
+      if (digit !== undefined) {
         const eventTime = event.timeStamp;
         if (bufferRef.current.length === 0) {
           rapidInputRef.current = true;
@@ -84,7 +92,7 @@ export function useRfid(options: UseRfidOptions = {}) {
         lastDigitAtRef.current = eventTime;
 
         if (bufferRef.current.length < 32) {
-          bufferRef.current += event.key;
+          bufferRef.current += digit;
           setInputLength(bufferRef.current.length);
         }
         window.clearTimeout(resetTimerRef.current);
