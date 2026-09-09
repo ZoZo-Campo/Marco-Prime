@@ -43,6 +43,7 @@ describe("History Endpoint", () => {
           id: expect.any(Number),
           firstName: expect.any(String),
           lastName: expect.any(String),
+          balance: expect.any(String),
         });
       }
     }

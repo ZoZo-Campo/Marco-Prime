@@ -20,6 +20,7 @@ export class OrderRepository {
           id: members.id,
           firstName: members.firstName,
           lastName: members.lastName,
+          balance: members.balance,
         },
         price: orders.price,
         amount: orders.amount,

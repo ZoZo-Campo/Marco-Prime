@@ -15,6 +15,7 @@ export const orderSchema = z.object({
       id: z.coerce.number().int().positive(),
       firstName: z.string(),
       lastName: z.string(),
+      balance: moneyStringSchema,
     })
     .nullable(),
   price: moneyStringSchema,

@@ -9,15 +9,25 @@ import { HistoryItem } from "./history-item";
 function HistoryListSkeleton() {
   return (
     <Card class="min-h-0 gap-0 py-0 overflow-auto">
+      <div class="grid min-w-[60rem] grid-cols-[minmax(10rem,1.4fr)_minmax(9rem,1.4fr)_7rem_7rem_7rem_7rem] items-center gap-4 border-b px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span>Membre</span>
+        <span>Opération</span>
+        <span class="text-right">Montant</span>
+        <span class="text-right">Ancien solde</span>
+        <span class="text-right">Nouveau solde</span>
+        <span class="text-right">Date</span>
+      </div>
       {new Array(HISTORY_SKELETON_COUNT).fill(null).map((_, index) => (
         <div
           key={index}
-          class="flex items-center gap-10 py-3 px-3 border-b last:border-b-0"
+          class="grid min-w-[60rem] grid-cols-[minmax(10rem,1.4fr)_minmax(9rem,1.4fr)_7rem_7rem_7rem_7rem] items-center gap-4 border-b px-3 py-3 last:border-b-0"
         >
           <Skeleton class="h-3 w-32" />
           <Skeleton class="h-3 w-24" />
-          <Skeleton class="h-3 w-20 ml-auto" />
-          <Skeleton class="h-3 w-20" />
+          <Skeleton class="ml-auto h-3 w-20" />
+          <Skeleton class="ml-auto h-3 w-20" />
+          <Skeleton class="ml-auto h-3 w-20" />
+          <Skeleton class="ml-auto h-3 w-20" />
         </div>
       ))}
     </Card>
@@ -55,10 +65,25 @@ export function HistoryList({
     );
   }
 
+  const balancesByOrder = calculateBalances(orders);
+
   return (
     <Card class="min-h-0 gap-0 py-0 overflow-auto">
+      <div class="sticky top-0 z-10 grid min-w-[60rem] grid-cols-[minmax(10rem,1.4fr)_minmax(9rem,1.4fr)_7rem_7rem_7rem_7rem] items-center gap-4 border-b bg-card px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span>Membre</span>
+        <span>Opération</span>
+        <span class="text-right">Montant</span>
+        <span class="text-right">Ancien solde</span>
+        <span class="text-right">Nouveau solde</span>
+        <span class="text-right">Date</span>
+      </div>
       {orders.map((order) => (
-        <HistoryItem key={order.id} order={order} />
+        <HistoryItem
+          key={order.id}
+          order={order}
+          previousBalance={balancesByOrder.get(order.id)?.previousBalance ?? null}
+          newBalance={balancesByOrder.get(order.id)?.newBalance ?? null}
+        />
       ))}
       {loadMoreError ? (
         <div class="flex min-h-16 items-center justify-center gap-3 p-2 text-destructive">
@@ -86,4 +111,53 @@ export function HistoryList({
       ) : null}
     </Card>
   );
+}
+
+interface HistoricalBalance {
+  previousBalance: string;
+  newBalance: string;
+}
+
+function calculateBalances(orders: OrderSchema[]) {
+  const runningBalances = new Map<number, number>();
+  const balancesByOrder = new Map<number, HistoricalBalance>();
+
+  for (const order of orders) {
+    if (!order.member) continue;
+
+    const memberId = order.member.id;
+    const currentBalance = runningBalances.get(memberId)
+      ?? toCents(order.member.balance);
+    if (currentBalance === null) continue;
+
+    const storedAmount = toCents(order.price);
+    if (storedAmount === null) continue;
+
+    // Current purchases contain a negative line total. Older Marco versions
+    // stored a positive unit price, so their amount must also be applied.
+    const ledgerAmount = order.product === null
+      ? Math.abs(storedAmount)
+      : storedAmount < 0
+        ? storedAmount
+        : -Math.abs(storedAmount) * order.amount;
+    const previousBalance = currentBalance - ledgerAmount;
+
+    balancesByOrder.set(order.id, {
+      previousBalance: fromCents(previousBalance),
+      newBalance: fromCents(currentBalance),
+    });
+    runningBalances.set(memberId, previousBalance);
+  }
+
+  return balancesByOrder;
+}
+
+function toCents(value: string) {
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) return null;
+  const cents = Math.round(Number(value) * 100);
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
+function fromCents(value: number) {
+  return `${(value / 100).toFixed(2)} €`;
 }

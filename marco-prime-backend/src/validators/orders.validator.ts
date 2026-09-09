@@ -13,6 +13,7 @@ export const orderSchema = z.object({
       id: z.number(),
       firstName: z.string(),
       lastName: z.string(),
+      balance: z.string(),
     })
     .nullable(),
   price: z.string(),

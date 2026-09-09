@@ -2,9 +2,15 @@ import type { OrderSchema } from "../../../schemas/order.schema";
 
 interface HistoryItemProps {
   order: OrderSchema;
+  previousBalance: string | null;
+  newBalance: string | null;
 }
 
-export function HistoryItem({ order }: HistoryItemProps) {
+export function HistoryItem({
+  order,
+  previousBalance,
+  newBalance,
+}: HistoryItemProps) {
   const formattedDate = new Date(order.date).toLocaleString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
@@ -24,13 +30,13 @@ export function HistoryItem({ order }: HistoryItemProps) {
   const hasInvalidSign = isRecharge ? ledgerAmount <= 0 : ledgerAmount >= 0;
 
   return (
-    <div class="flex items-center gap-4 py-2 px-3 border-b last:border-b-0 text-sm">
-      <span class="font-medium truncate w-40">{memberName}</span>
-      <span class="text-muted-foreground truncate w-28">
+    <div class="grid min-w-[60rem] grid-cols-[minmax(10rem,1.4fr)_minmax(9rem,1.4fr)_7rem_7rem_7rem_7rem] items-center gap-4 border-b px-3 py-2 text-sm last:border-b-0">
+      <span class="truncate font-medium">{memberName}</span>
+      <span class="truncate text-muted-foreground">
         {isRecharge ? productName : `${order.amount}x ${productName}`}
       </span>
       <span
-        class={`font-medium ml-auto ${
+        class={`text-right font-medium ${
           hasInvalidSign
             ? "text-amber-600"
             : isRecharge
@@ -41,7 +47,13 @@ export function HistoryItem({ order }: HistoryItemProps) {
       >
         {formattedAmount}
       </span>
-      <span class="text-muted-foreground w-28 text-right">{formattedDate}</span>
+      <span class="text-right tabular-nums text-muted-foreground">
+        {previousBalance ?? "—"}
+      </span>
+      <span class="text-right tabular-nums font-medium">
+        {newBalance ?? "—"}
+      </span>
+      <span class="text-right text-muted-foreground">{formattedDate}</span>
     </div>
   );
 }
