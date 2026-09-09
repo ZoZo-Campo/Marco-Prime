@@ -133,14 +133,7 @@ function calculateBalances(orders: OrderSchema[]) {
     const storedAmount = toCents(order.price);
     if (storedAmount === null) continue;
 
-    // Current purchases contain a negative line total. Older Marco versions
-    // stored a positive unit price, so their amount must also be applied.
-    const ledgerAmount = order.product === null
-      ? Math.abs(storedAmount)
-      : storedAmount < 0
-        ? storedAmount
-        : -Math.abs(storedAmount) * order.amount;
-    const previousBalance = currentBalance - ledgerAmount;
+    const previousBalance = currentBalance - storedAmount;
 
     balancesByOrder.set(order.id, {
       previousBalance: fromCents(previousBalance),
