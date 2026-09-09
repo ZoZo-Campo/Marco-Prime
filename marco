@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/compose.orange-pi.yml"
+WIFI_COMPOSE_FILE="${SCRIPT_DIR}/compose.raspberry-wifi.yml"
 ENV_FILE="${SCRIPT_DIR}/.env.orange-pi"
 
 if docker compose version >/dev/null 2>&1; then
@@ -51,9 +52,13 @@ validate_environment() {
 }
 
 compose() {
+  local compose_files=(-f "${COMPOSE_FILE}")
+  if [[ -S /run/marco-wifi/control.sock ]]; then
+    compose_files+=(-f "${WIFI_COMPOSE_FILE}")
+  fi
   "${COMPOSE[@]}" \
     --project-name marco-prime \
-    -f "${COMPOSE_FILE}" \
+    "${compose_files[@]}" \
     --env-file "${ENV_FILE}" \
     "$@"
 }

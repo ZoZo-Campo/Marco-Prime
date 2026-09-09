@@ -8,6 +8,7 @@ import {
   Save,
   ShieldAlert,
   ShoppingBasket,
+  Wifi,
 } from "lucide-preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { apiHeaders, apiUrl } from "../config/api";
@@ -21,11 +22,12 @@ import { cn } from "../utils/cn";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { StatisticsPanel } from "../components/features/config/statistics-panel";
+import { WifiPanel } from "../components/features/config/wifi-panel";
 
 export const CONFIG_ROUTE_URL = "/config";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-type AdminSection = "catalog" | "statistics";
+type AdminSection = "catalog" | "statistics" | "wifi";
 
 export function ConfigPage() {
   return (
@@ -179,6 +181,12 @@ function ConfigContent() {
       >
         <BarChart3 class="size-5" /> Statistiques
       </Button>
+      <Button
+        variant={section === "wifi" ? "default" : "outline"}
+        onClick={() => setSection("wifi")}
+      >
+        <Wifi class="size-5" /> Wi-Fi
+      </Button>
       <span class="ml-auto text-sm text-muted-foreground">
         {member.firstName} {member.lastName}
       </span>
@@ -190,6 +198,15 @@ function ConfigContent() {
       <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
         {adminNavigation}
         <StatisticsPanel adminCardNumber={member.cardNumber} />
+      </div>
+    );
+  }
+
+  if (section === "wifi") {
+    return (
+      <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+        {adminNavigation}
+        <WifiPanel adminCardNumber={member.cardNumber} />
       </div>
     );
   }

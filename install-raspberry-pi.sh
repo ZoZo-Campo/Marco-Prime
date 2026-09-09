@@ -34,6 +34,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   chromium \
   curl \
   dbus-user-session \
+  network-manager \
+  python3 \
   rsync
 
 if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
@@ -65,6 +67,44 @@ fi
 
 systemctl enable --now docker.service
 usermod -aG docker "${KIOSK_USER}"
+
+echo "Installation du contrôle Wi-Fi sécurisé..."
+install -D -m 0755 \
+  "${SCRIPT_DIR}/raspberry-pi/marco-wifi-helper.py" \
+  /usr/local/libexec/marco-wifi-helper.py
+
+KIOSK_GID="$(id -g "${KIOSK_USER}")"
+cat > /etc/systemd/system/marco-wifi.service <<EOF
+[Unit]
+Description=Marco Prime restricted Wi-Fi controller
+After=NetworkManager.service
+Requires=NetworkManager.service
+
+[Service]
+Type=simple
+User=root
+Environment=MARCO_WIFI_SOCKET_GID=${KIOSK_GID}
+ExecStart=/usr/bin/python3 /usr/local/libexec/marco-wifi-helper.py
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=marco-wifi
+RuntimeDirectoryMode=0770
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now NetworkManager.service
+systemctl enable --now marco-wifi.service
 
 echo
 echo "Dépendances installées. Marco Prime n'a pas été lancé."
