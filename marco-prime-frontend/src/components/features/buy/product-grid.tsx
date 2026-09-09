@@ -1,7 +1,10 @@
 import { useMemo } from "preact/hooks";
 import { AlertCircle, RefreshCw } from "lucide-preact";
 import { apiUrl } from "../../../config/api";
-import { PRODUCT_PAGE_SIZE } from "../../../constants";
+import {
+  PRODUCT_FETCH_LIMIT,
+  PRODUCT_GRID_PLACEHOLDER_COUNT,
+} from "../../../constants";
 import { shopping } from "../../../contexts/shopping-context";
 import { useApi } from "../../../hooks/use-api";
 import { useSafeSearchParams } from "../../../hooks/use-safe-search-params";
@@ -16,7 +19,7 @@ export function ProductGrid() {
   const { data, loading, error, refetch } = useApi(
     productListResponseSchema,
     apiUrl(
-      `products/${searchParams.categoryId}?page=${searchParams.page}&limit=${PRODUCT_PAGE_SIZE}`,
+      `products/${searchParams.categoryId}?page=1&limit=${PRODUCT_FETCH_LIMIT}`,
     ),
   );
 
@@ -32,7 +35,7 @@ export function ProductGrid() {
   if (loading) {
     return (
       <main class="flex-1 grid grid-cols-3 grid-rows-3 gap-2">
-        {new Array(PRODUCT_PAGE_SIZE).fill(null).map((_, id) => (
+        {new Array(PRODUCT_GRID_PLACEHOLDER_COUNT).fill(null).map((_, id) => (
           <ProductSkeleton key={id} />
         ))}
       </main>
@@ -65,7 +68,7 @@ export function ProductGrid() {
   }
 
   return (
-    <main class="flex-1 grid grid-cols-3 grid-rows-3 gap-2">
+    <main class="flex-1 grid grid-cols-3 auto-rows-[minmax(140px,1fr)] gap-2 overflow-y-auto pr-1">
       {data.data.map((product) => (
         <ProductItem
           key={product.id}

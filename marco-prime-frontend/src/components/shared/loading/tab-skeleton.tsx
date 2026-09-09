@@ -2,8 +2,6 @@ import { Skeleton } from "../../ui/skeleton";
 
 export function TabSkeleton() {
   return (
-    <div class="py-3">
-      <Skeleton class="h-7 w-20" />
-    </div>
+    <Skeleton class="h-14 w-40 shrink-0 rounded-lg" />
   );
 }

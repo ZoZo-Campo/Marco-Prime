@@ -31,6 +31,8 @@ export function ResetButton() {
         shopping.selected.value.length === 0 ||
         purchaseInteractionLockedSignal.value
       }
+      aria-label="Vider le panier"
+      title="Vider le panier"
     >
       <RotateCcw class="size-5" />
     </Button>
@@ -117,6 +119,7 @@ export function SubmitButton() {
 
   return (
     <Button
+      class="min-h-16 w-full text-xl font-bold shadow-md"
       disabled={!canSubmit}
       variant="default"
       onClick={handlePurchase}

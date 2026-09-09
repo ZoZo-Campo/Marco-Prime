@@ -1,39 +1,31 @@
-import { useSafeSearchParams } from "../../../hooks/use-safe-search-params";
-import { pageSearchParamsSchema } from "../../../schemas/pagination.schema";
-import type { PaginationSchema } from "../../../schemas/product.schema";
-import { NextPageButton, PrevPageButton } from "../../layout/page-buttons";
 import { Skeleton } from "../../ui/skeleton";
 
 interface HistoryNavigationProps {
-  pagination: PaginationSchema | null;
+  total: number | null;
+  displayedCount: number;
   loading: boolean;
 }
 
-export function HistoryNavigation({ pagination, loading }: HistoryNavigationProps) {
-  const { searchParams } = useSafeSearchParams(pageSearchParamsSchema);
-
-  if (loading || !pagination) {
+export function HistoryNavigation({
+  total,
+  displayedCount,
+  loading,
+}: HistoryNavigationProps) {
+  if (loading || total === null) {
     return (
-      <header class="flex items-center justify-between">
-        <Skeleton class="h-6 w-48" />
-        <div class="flex gap-2">
-          <PrevPageButton disabled />
-          <NextPageButton disabled />
-        </div>
+      <header class="flex min-h-14 items-center">
+        <Skeleton class="h-8 w-64" />
       </header>
     );
   }
 
   return (
-    <header class="flex items-center justify-between">
-      <span class="text-sm text-muted-foreground">
-        Page {pagination.page} / {pagination.totalPages} ({pagination.total}{" "}
-        commandes)
+    <header class="flex min-h-14 items-center justify-between px-2">
+      <h1 class="text-xl font-semibold">Historique</h1>
+      <span class="text-base text-muted-foreground">
+        {displayedCount} commande{displayedCount > 1 ? "s" : ""} affichée
+        {displayedCount > 1 ? "s" : ""} sur {total}
       </span>
-      <div class="flex gap-2">
-        <PrevPageButton disabled={searchParams.page === 1} />
-        <NextPageButton disabled={searchParams.page >= pagination.totalPages} />
-      </div>
     </header>
   );
 }

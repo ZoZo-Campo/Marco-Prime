@@ -2,7 +2,6 @@ import z from "zod";
 import { AlertCircle, RefreshCw } from "lucide-preact";
 import { useEffect } from "preact/hooks";
 import { apiUrl } from "../../../config/api";
-import { PRODUCT_PAGE_SIZE, PRODUCT_TYPE_COUNT } from "../../../constants";
 import { cn } from "../../../utils/cn";
 import { capitalize } from "../../../utils/string";
 import { useApi } from "../../../hooks/use-api";
@@ -10,7 +9,6 @@ import { useSafeSearchParams } from "../../../hooks/use-safe-search-params";
 import { BUY_ROUTE_URL } from "../../../pages/buy";
 import { buySearchParamsSchema } from "../../../schemas/pagination.schema";
 import { productTypeSchema } from "../../../schemas/product.schema";
-import { NextPageButton, PrevPageButton } from "../../layout/page-buttons";
 import { Button } from "../../ui/button";
 import { TabSkeleton } from "../../shared/loading/tab-skeleton";
 
@@ -33,14 +31,12 @@ export function ProductTabs() {
 
   if (loading) {
     return (
-      <header class="flex items-center gap-2">
-        <div class="flex-1 min-w-0 flex gap-2 overflow-x-auto">
-          {new Array(PRODUCT_TYPE_COUNT).fill(null).map((_, id) => (
+      <header class="flex min-h-16 items-center gap-3 overflow-hidden">
+        <div class="flex min-w-0 flex-1 gap-3 overflow-hidden">
+          {new Array(4).fill(null).map((_, id) => (
             <TabSkeleton key={id} />
           ))}
         </div>
-        <PrevPageButton disabled />
-        <NextPageButton disabled />
       </header>
     );
   }
@@ -59,27 +55,26 @@ export function ProductTabs() {
     );
   }
 
-  const [currentTab] = data?.filter(
-    (tab) => tab.id === searchParams.categoryId,
-  );
-
   return (
-    <header class="flex items-center gap-2">
-      <div class="flex-1 min-w-0 flex overflow-x-auto">
-        {data.map((productType) => (
-          <Tab
-            key={productType.id}
-            label={productType.type}
-            category={productType.id}
-          />
-        ))}
+    <header class="relative min-h-16" aria-label="Catégories de produits">
+      <div class="flex min-h-16 items-center gap-3 overflow-x-auto px-4 pb-1">
+        <div class="flex min-w-max gap-3">
+          {data.map((productType) => (
+            <Tab
+              key={productType.id}
+              label={productType.type}
+              category={productType.id}
+            />
+          ))}
+        </div>
       </div>
-      <PrevPageButton disabled={searchParams.page === 1} />
-      <NextPageButton
-        disabled={
-          !currentTab ||
-          searchParams.page * PRODUCT_PAGE_SIZE >= currentTab.productCount
-        }
+      <div
+        class="pointer-events-none absolute inset-y-1 left-0 w-7 bg-gradient-to-r from-background to-transparent"
+        aria-hidden="true"
+      />
+      <div
+        class="pointer-events-none absolute inset-y-1 right-0 w-7 bg-gradient-to-l from-background to-transparent"
+        aria-hidden="true"
       />
     </header>
   );
@@ -91,10 +86,15 @@ function Tab({ label, category }: { label: string; category: number }) {
 
   return (
     <Button
-      class={cn(isActive && "text-primary hover:text-primary")}
-      variant="ghost"
-      onClick={() => route(`${BUY_ROUTE_URL}?categoryId=${category}`)}
-      size="sm"
+      class={cn(
+        "min-h-14 rounded-lg border px-7 text-xl shadow-sm",
+        isActive &&
+          "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+      )}
+      variant={isActive ? "default" : "outline"}
+      onClick={() =>
+        route(`${BUY_ROUTE_URL}?categoryId=${category}&page=1`)
+      }
     >
       {capitalize(label)}
     </Button>

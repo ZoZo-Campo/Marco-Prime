@@ -1,4 +1,4 @@
-export const PRODUCT_PAGE_SIZE = 9;
-export const PRODUCT_TYPE_COUNT = 6;
-export const MAX_RECEIPT_PRODUCTS = 7;
-export const ORDER_PAGE_SIZE = 12;
+export const PRODUCT_FETCH_LIMIT = 100;
+export const PRODUCT_GRID_PLACEHOLDER_COUNT = 9;
+export const HISTORY_BATCH_SIZE = 50;
+export const HISTORY_SKELETON_COUNT = 12;
