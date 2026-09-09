@@ -45,6 +45,7 @@ DATABASE_URL=mysql://user:password@localhost:3306/database_name
 
 # Environment
 NODE_ENV=development
+TZ=Europe/Paris
 ```
 
 ## Scripts disponibles

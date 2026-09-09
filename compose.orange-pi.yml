@@ -30,6 +30,8 @@ services:
       # Le service écoute toujours sur 3000 dans le conteneur. Seul
       # MARCO_HOST_PORT change le port visible sur le Mac/Raspberry.
       API_PORT: "3000"
+      # La base Fouaille utilise l'heure française pour ses TIMESTAMP.
+      TZ: "${TZ:-Europe/Paris}"
     ports:
       - "127.0.0.1:${MARCO_HOST_PORT:-3001}:3000"
     volumes:

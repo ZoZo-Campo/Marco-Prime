@@ -31,6 +31,10 @@ RUN mkdir -p /app/data \
 
 ENV NODE_ENV=production
 ENV API_PORT=3000
+# Fouaille stores and returns its SQL timestamps in French local time. Keeping
+# Node on the same timezone prevents the browser from adding the UTC offset a
+# second time when dates are serialized as ISO strings.
+ENV TZ=Europe/Paris
 EXPOSE 3000
 
 USER node
