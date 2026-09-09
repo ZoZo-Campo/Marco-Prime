@@ -31,7 +31,7 @@ export class OrderRepository {
       .leftJoin(members, eq(orders.memberId, members.id))
       .limit(limit)
       .offset(offset)
-      .orderBy(desc(orders.date));
+      .orderBy(desc(orders.date), desc(orders.id));
   }
 
   async createCartPurchaseTransaction(
