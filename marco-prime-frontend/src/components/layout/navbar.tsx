@@ -11,6 +11,7 @@ import { HOME_ROUTE_URL } from "../../pages/home";
 import { HISTORY_ROUTE_URL } from "../../pages/history";
 import { RECHARGE_ROUTE_URL } from "../../pages/recharge";
 import { NavButton } from "../shared/navigation/nav-button";
+import { SystemStatus } from "../features/system/system-status";
 
 export function NavBar() {
   return (
@@ -23,6 +24,7 @@ export function NavBar() {
         icon={ArrowLeftRight}
       />
       <NavButton href={CONFIG_ROUTE_URL} label="Config" icon={Wrench} />
+      <SystemStatus />
       <NavButton href={HISTORY_ROUTE_URL} icon={ClockFading} />
     </nav>
   );

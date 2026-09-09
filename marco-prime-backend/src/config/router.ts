@@ -6,6 +6,7 @@ import { ProductController } from "../controllers/product.controller.js";
 import { PurchaseController } from "../controllers/purchase.controller.js";
 import { RechargeController } from "../controllers/recharge.controller.js";
 import { StatisticsController } from "../controllers/statistics.controller.js";
+import { SystemController } from "../controllers/system.controller.js";
 import { cardNumberParamSchema } from "../validators/members.validator.js";
 import { paginationQuerySchema } from "../validators/orders.validator.js";
 import {
@@ -27,8 +28,10 @@ const orderController = new OrderController();
 const purchaseController = new PurchaseController();
 const rechargeController = new RechargeController();
 const statisticsController = new StatisticsController();
+const systemController = new SystemController();
 
 const router = new Hono()
+  .get("/system/status", (c) => systemController.getStatus(c))
   .get(
     "/member/:card_number",
     zValidator("param", cardNumberParamSchema),

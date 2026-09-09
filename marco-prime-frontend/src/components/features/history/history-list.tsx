@@ -1,4 +1,5 @@
-import { AlertCircle, RefreshCw } from "lucide-preact";
+import { AlertCircle, RefreshCw, X } from "lucide-preact";
+import { useState } from "preact/hooks";
 import { HISTORY_SKELETON_COUNT } from "../../../constants";
 import type { OrderSchema } from "../../../schemas/order.schema";
 import { Button } from "../../ui/button";
@@ -53,6 +54,8 @@ export function HistoryList({
   onLoadMore,
   onRetry,
 }: HistoryListProps) {
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+
   if (loading || !orders) {
     return <HistoryListSkeleton />;
   }
@@ -66,6 +69,10 @@ export function HistoryList({
   }
 
   const balancesByOrder = calculateBalances(orders);
+  const selectedOrder = orders.find((order) => order.id === selectedOrderId);
+  const selectedBalances = selectedOrder
+    ? balancesByOrder.get(selectedOrder.id)
+    : undefined;
 
   return (
     <Card class="min-h-0 gap-0 py-0 overflow-auto">
@@ -83,6 +90,7 @@ export function HistoryList({
           order={order}
           previousBalance={balancesByOrder.get(order.id)?.previousBalance ?? null}
           newBalance={balancesByOrder.get(order.id)?.newBalance ?? null}
+          onSelect={() => setSelectedOrderId(order.id)}
         />
       ))}
       {loadMoreError ? (
@@ -109,7 +117,88 @@ export function HistoryList({
           Toutes les commandes sont affichées.
         </p>
       ) : null}
+      {selectedOrder && (
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          role="presentation"
+          onClick={() => setSelectedOrderId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="transaction-title"
+            class="w-full max-w-xl rounded-xl border bg-card p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div class="mb-6 flex items-center justify-between">
+              <div>
+                <h2 id="transaction-title" class="text-2xl font-bold">
+                  Détail de la transaction
+                </h2>
+                <p class="text-sm text-muted-foreground">
+                  Écriture Fouaille n°{selectedOrder.id}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Fermer"
+                onClick={() => setSelectedOrderId(null)}
+              >
+                <X class="size-6" />
+              </Button>
+            </div>
+            <TransactionDetail
+              order={selectedOrder}
+              previousBalance={selectedBalances?.previousBalance ?? null}
+              newBalance={selectedBalances?.newBalance ?? null}
+            />
+          </div>
+        </div>
+      )}
     </Card>
+  );
+}
+
+function TransactionDetail({
+  order,
+  previousBalance,
+  newBalance,
+}: {
+  order: OrderSchema;
+  previousBalance: string | null;
+  newBalance: string | null;
+}) {
+  const memberName = order.member
+    ? `${order.member.firstName} ${order.member.lastName}`
+    : "Membre supprimé";
+  const operation = order.product
+    ? `${order.amount} × ${order.product.name}`
+    : "Rechargement";
+  const amount = Number(order.price);
+  const date = new Date(order.date).toLocaleString("fr-FR", {
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+
+  const rows = [
+    ["Membre", memberName],
+    ["Opération", operation],
+    ["Montant enregistré", Number.isFinite(amount) ? `${amount.toFixed(2)} €` : "—"],
+    ["Ancien solde", previousBalance ?? "Indisponible"],
+    ["Nouveau solde", newBalance ?? "Indisponible"],
+    ["Date", date],
+  ];
+
+  return (
+    <dl class="grid grid-cols-[auto_1fr] gap-x-8 gap-y-4 text-lg">
+      {rows.map(([label, value]) => (
+        <>
+          <dt class="text-muted-foreground">{label}</dt>
+          <dd class="text-right font-medium">{value}</dd>
+        </>
+      ))}
+    </dl>
   );
 }
 
