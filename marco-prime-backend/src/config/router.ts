@@ -5,6 +5,7 @@ import { OrderController } from "../controllers/order.controller.js";
 import { ProductController } from "../controllers/product.controller.js";
 import { PurchaseController } from "../controllers/purchase.controller.js";
 import { RechargeController } from "../controllers/recharge.controller.js";
+import { StatisticsController } from "../controllers/statistics.controller.js";
 import { cardNumberParamSchema } from "../validators/members.validator.js";
 import { paginationQuerySchema } from "../validators/orders.validator.js";
 import {
@@ -14,12 +15,18 @@ import {
 } from "../validators/products.validator.js";
 import { purchaseRequestSchema } from "../validators/purchase.validator.js";
 import { rechargeRequestSchema } from "../validators/recharge.validator.js";
+import {
+  statisticsCostQuerySchema,
+  statisticsCostUpdateSchema,
+  statisticsQuerySchema,
+} from "../validators/statistics.validator.js";
 
 const memberController = new MemberController();
 const productController = new ProductController();
 const orderController = new OrderController();
 const purchaseController = new PurchaseController();
 const rechargeController = new RechargeController();
+const statisticsController = new StatisticsController();
 
 const router = new Hono()
   .get(
@@ -43,6 +50,21 @@ const router = new Hono()
   )
   .get("/history", zValidator("query", paginationQuerySchema), (c) =>
     orderController.getOrdersHistory(c),
+  )
+  .post(
+    "/statistics",
+    zValidator("json", statisticsQuerySchema),
+    (c) => statisticsController.getStatistics(c),
+  )
+  .post(
+    "/statistics/costs",
+    zValidator("json", statisticsCostQuerySchema),
+    (c) => statisticsController.getCosts(c),
+  )
+  .put(
+    "/statistics/costs",
+    zValidator("json", statisticsCostUpdateSchema),
+    (c) => statisticsController.updateCosts(c),
   )
   .post("/purchase", zValidator("json", purchaseRequestSchema), (c) =>
     purchaseController.createPurchase(c),

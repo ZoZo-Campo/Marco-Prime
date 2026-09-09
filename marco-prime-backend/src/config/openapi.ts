@@ -240,6 +240,59 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/v1/statistics": {
+      post: {
+        summary: "Calculate sales statistics",
+        description:
+          "Calculate revenue, locally configured costs and estimated profit for a date range",
+        tags: ["Statistics"],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["adminCardNumber", "from", "to"],
+                properties: {
+                  adminCardNumber: { type: "integer" },
+                  from: { type: "string", format: "date-time" },
+                  to: { type: "string", format: "date-time" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Sales and profit statistics" },
+          "400": { description: "Invalid date range" },
+          "403": { description: "Administrator card required" },
+        },
+      },
+    },
+    "/api/v1/statistics/costs": {
+      post: {
+        summary: "Get locally configured purchase costs",
+        tags: ["Statistics"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Products and local purchase costs" },
+          "403": { description: "Administrator card required" },
+        },
+      },
+      put: {
+        summary: "Save local purchase costs",
+        description:
+          "Store purchase costs in the Marco data volume without modifying Fouaille",
+        tags: ["Statistics"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Purchase costs saved locally" },
+          "400": { description: "Invalid product or price" },
+          "403": { description: "Administrator card required" },
+        },
+      },
+    },
     "/api/v1/purchase": {
       post: {
         summary: "Create a purchase",

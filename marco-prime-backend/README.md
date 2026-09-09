@@ -120,6 +120,15 @@ Une documentation Swagger UI interactive est disponible une fois le serveur dém
 - `GET /api/v1/history` - Historique des commandes (paginé)
 - `POST /api/v1/purchase` - Créer un achat
 
+### Statistiques (carte administrateur requise)
+- `POST /api/v1/statistics` - Calculer recettes, coûts et bénéfice sur une période
+- `POST /api/v1/statistics/costs` - Lire les prix d'achat enregistrés localement
+- `PUT /api/v1/statistics/costs` - Enregistrer les prix d'achat dans le volume Marco
+
+Les prix d'achat sont conservés dans `product-costs.json` sous
+`MARCO_DATA_DIR`. Ils ne modifient jamais la base Fouaille. Les rechargements
+sont présentés séparément des recettes de vente.
+
 ### Recharges
 - `POST /api/v1/recharge` - Recharger le solde d'un membre
 

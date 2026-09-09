@@ -1,11 +1,13 @@
 import type { ComponentChildren } from "preact";
 import {
   AlertCircle,
+  BarChart3,
   Check,
   CreditCard,
   Loader2,
   Save,
   ShieldAlert,
+  ShoppingBasket,
 } from "lucide-preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { apiHeaders, apiUrl } from "../config/api";
@@ -18,10 +20,12 @@ import {
 import { cn } from "../utils/cn";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import { StatisticsPanel } from "../components/features/config/statistics-panel";
 
 export const CONFIG_ROUTE_URL = "/config";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+type AdminSection = "catalog" | "statistics";
 
 export function ConfigPage() {
   return (
@@ -52,6 +56,7 @@ function ConfigContent() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [section, setSection] = useState<AdminSection>("catalog");
 
   useEffect(() => {
     if (!catalog) return;
@@ -160,8 +165,38 @@ function ConfigContent() {
     }
   };
 
+  const adminNavigation = (
+    <nav class="flex items-center gap-3 border-b bg-card px-7 py-3">
+      <Button
+        variant={section === "catalog" ? "default" : "outline"}
+        onClick={() => setSection("catalog")}
+      >
+        <ShoppingBasket class="size-5" /> Catalogue
+      </Button>
+      <Button
+        variant={section === "statistics" ? "default" : "outline"}
+        onClick={() => setSection("statistics")}
+      >
+        <BarChart3 class="size-5" /> Statistiques
+      </Button>
+      <span class="ml-auto text-sm text-muted-foreground">
+        {member.firstName} {member.lastName}
+      </span>
+    </nav>
+  );
+
+  if (section === "statistics") {
+    return (
+      <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+        {adminNavigation}
+        <StatisticsPanel adminCardNumber={member.cardNumber} />
+      </div>
+    );
+  }
+
   return (
     <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+      {adminNavigation}
       <header class="flex items-center justify-between gap-5 border-b bg-card px-7 py-4">
         <div>
           <h1 class="text-2xl font-bold">Produits vendus ce soir</h1>
