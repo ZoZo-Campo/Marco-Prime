@@ -106,10 +106,37 @@ systemctl daemon-reload
 systemctl enable --now NetworkManager.service
 systemctl enable --now marco-wifi.service
 
+echo "Activation du démarrage automatique de Docker et de l'API Marco..."
+KIOSK_GROUP="$(id -gn "${KIOSK_USER}")"
+cat > /etc/systemd/system/marco-prime.service <<EOF
+[Unit]
+Description=Marco Prime Docker application
+Requires=docker.service
+After=docker.service network-online.target marco-wifi.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+User=${KIOSK_USER}
+Group=${KIOSK_GROUP}
+SupplementaryGroups=docker
+WorkingDirectory=${SCRIPT_DIR}
+ExecStart="${SCRIPT_DIR}/marco" start
+RemainAfterExit=yes
+TimeoutStartSec=0
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable marco-prime.service
+
 echo
-echo "Dépendances installées. Marco Prime n'a pas été lancé."
+echo "Dépendances installées. Docker et l'API Marco démarreront automatiquement."
 echo "Redémarre la Raspberry pour activer l'accès Docker de ${KIOSK_USER}."
-echo "Ensuite, depuis ${SCRIPT_DIR} :"
-echo "  ./marco check"
-echo "  ./marco start"
-echo "Puis ouvre http://127.0.0.1:3001/ dans Chromium."
+echo "Le Bureau et Chromium restent manuels."
+echo "Après le redémarrage, ouvre http://127.0.0.1:3001/ dans Chromium."
