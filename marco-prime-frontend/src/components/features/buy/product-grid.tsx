@@ -1,9 +1,10 @@
-import { useMemo } from "preact/hooks";
+import { useEffect, useMemo, useRef } from "preact/hooks";
 import { AlertCircle, RefreshCw } from "lucide-preact";
 import { apiUrl } from "../../../config/api";
 import {
   PRODUCT_FETCH_LIMIT,
   PRODUCT_GRID_PLACEHOLDER_COUNT,
+  PRODUCT_PRICE_REFRESH_INTERVAL_MS,
 } from "../../../constants";
 import { shopping } from "../../../contexts/shopping-context";
 import { useApi } from "../../../hooks/use-api";
@@ -23,6 +24,20 @@ export function ProductGrid() {
     ),
   );
 
+  const refetchRef = useRef(refetch);
+  refetchRef.current = refetch;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void refetchRef.current();
+    }, PRODUCT_PRICE_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (data) shopping.refreshProductDetails(data.data);
+  }, [data]);
+
   // O(1) lookup map for product amounts
   const amountMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -32,7 +47,7 @@ export function ProductGrid() {
     return map;
   }, [shopping.selected.value]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <main class="flex-1 grid grid-cols-3 grid-rows-3 gap-2">
         {new Array(PRODUCT_GRID_PLACEHOLDER_COUNT).fill(null).map((_, id) => (
