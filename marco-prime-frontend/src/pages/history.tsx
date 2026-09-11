@@ -39,6 +39,13 @@ export function HistoryPage() {
     setPagination(data.pagination);
   }, [data, page]);
 
+  const refreshAfterCorrection = () => {
+    setOrders([]);
+    setPagination(null);
+    if (page === 1) void refetch();
+    else setPage(1);
+  };
+
   if (error && orders.length === 0) {
     return (
       <div class="flex flex-1 flex-col items-center justify-center gap-4 text-center">
@@ -71,6 +78,7 @@ export function HistoryPage() {
         loadMoreError={orders.length > 0 ? error : null}
         onLoadMore={() => setPage((current) => current + 1)}
         onRetry={() => void refetch()}
+        onCorrectionComplete={refreshAfterCorrection}
       />
     </div>
   );

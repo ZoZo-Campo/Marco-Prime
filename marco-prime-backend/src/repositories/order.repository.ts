@@ -314,7 +314,12 @@ export class OrderRepository {
           .where(eq(products.id, replacementProductId))
           .limit(1)
           .for("update");
-        if (!replacement?.available) throw new Error("CORRECTION_PRODUCT_UNAVAILABLE");
+        if (
+          !replacement ||
+          (!replacement.available && replacement.id !== original.productId)
+        ) {
+          throw new Error("CORRECTION_PRODUCT_UNAVAILABLE");
+        }
 
         let unitPriceCents: number | null;
         if (replacement.id === original.productId && (-originalLedgerCents) % original.amount === 0) {

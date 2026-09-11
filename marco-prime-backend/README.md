@@ -130,6 +130,11 @@ journal local `order-corrections.json` empêche de corriger deux fois la même
 vente. Une correction laissée dans l’état `pending` après une coupure doit être
 vérifiée par un administrateur avant toute intervention manuelle.
 
+Dans l’interface, la correction se fait directement en touchant une ligne de
+l’onglet **Historique**. Une carte administrateur et un motif d’au moins trois
+caractères sont exigés. Le motif reste ensuite visible dans le détail des
+écritures de correction.
+
 ### Statistiques (carte administrateur requise)
 - `POST /api/v1/statistics` - Calculer recettes, coûts et bénéfice sur une période
 - `POST /api/v1/statistics/costs` - Lire les prix d'achat enregistrés localement
@@ -147,7 +152,10 @@ Ce tableau est volontairement indépendant des ventes théoriques de Marco. Les
 litres réellement mesurés, le prix d’achat par litre et les recettes réelles
 sont saisis manuellement. Marco calcule seulement le coût total et le résultat
 (`recettes - coût`). Il n’y a ni HT, ni TVA, ni brut/net. Les données sont
-conservées dans `accounting.json` sous `MARCO_DATA_DIR`.
+conservées dans `accounting.json` sous `MARCO_DATA_DIR`. Chaque ligne référence
+un produit réel du catalogue Fouaille. Le tableau peut être exporté en CSV
+depuis l’interface ; Chromium demande alors l’emplacement où enregistrer le
+fichier lorsque son sélecteur de fichiers est disponible.
 
 ### Recharges
 - `POST /api/v1/recharge` - Recharger le solde d'un membre

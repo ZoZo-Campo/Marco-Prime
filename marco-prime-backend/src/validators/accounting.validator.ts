@@ -14,6 +14,7 @@ export const accountingUpdateSchema = z.object({
   eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   rows: z.array(z.object({
     id: z.string().uuid(),
+    productId: z.number().int().positive().safe(),
     label: z.string().trim().min(1).max(100),
     liters: decimal(3).refine((value) => Number(value) <= 100_000),
     purchasePricePerLiter: decimal(4).refine((value) => Number(value) <= 100_000),
@@ -21,5 +22,8 @@ export const accountingUpdateSchema = z.object({
   })).max(200).refine(
     (rows) => new Set(rows.map((row) => row.id)).size === rows.length,
     { message: "Accounting row identifiers must be unique" },
+  ).refine(
+    (rows) => new Set(rows.map((row) => row.productId)).size === rows.length,
+    { message: "Accounting products must be unique" },
   ),
 });

@@ -28,6 +28,7 @@ describe("AccountingService", () => {
       rows: [
         {
           id: "f31efb78-158b-4f28-914f-8f42c86e98f9",
+          productId: 1,
           label: "Primus",
           liters: "19.57",
           purchasePricePerLiter: "3.14",
@@ -35,6 +36,7 @@ describe("AccountingService", () => {
         },
         {
           id: "5c74c5c7-461e-41dc-a6e1-09c084b52a93",
+          productId: 2,
           label: "Paix Dieu",
           liters: "24.2",
           purchasePricePerLiter: "6.17",

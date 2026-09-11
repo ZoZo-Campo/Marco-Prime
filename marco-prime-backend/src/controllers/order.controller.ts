@@ -25,6 +25,9 @@ export class OrderController {
     const correctedOriginals = new Set(
       completed.map((correction) => correction.originalOrderId),
     );
+    const originalById = new Map(
+      completed.map((correction) => [correction.originalOrderId, correction]),
+    );
     const refundById = new Map(
       completed.map((correction) => [correction.refundOrderId, correction]),
     );
@@ -40,6 +43,8 @@ export class OrderController {
       data: ordersList.map((order) => {
         const refund = refundById.get(order.id);
         const replacement = replacementById.get(order.id);
+        const original = originalById.get(order.id);
+        const correction = original ?? refund ?? replacement;
         return {
           ...order,
           ledgerKind: refund
@@ -53,6 +58,7 @@ export class OrderController {
                   : "recharge",
           correctionOriginalOrderId:
             refund?.originalOrderId ?? replacement?.originalOrderId ?? null,
+          correctionReason: correction?.reason ?? null,
         };
       }),
       pagination: {

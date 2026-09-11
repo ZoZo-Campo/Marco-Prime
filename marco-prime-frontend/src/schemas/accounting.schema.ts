@@ -5,6 +5,7 @@ const decimalStringSchema = z.string().regex(/^\d+(?:\.\d+)?$/);
 
 export const accountingRowSchema = z.object({
   id: z.string().uuid(),
+  productId: z.number().int().positive().nullable(),
   label: z.string(),
   liters: decimalStringSchema,
   purchasePricePerLiter: decimalStringSchema,

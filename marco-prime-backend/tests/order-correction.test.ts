@@ -103,6 +103,26 @@ describe("Order correction endpoints", () => {
         toCents(originalBalance) - expectedCharge,
       );
 
+      const historyResponse = await client.api.v1.history.$get(
+        { query: { page: "1", limit: "20" } },
+        authenticatedOptions,
+      );
+      expect(historyResponse.status).toBe(200);
+      const history = await historyResponse.json();
+      const historyById = new Map(history.data.map((order) => [order.id, order]));
+      expect(historyById.get(originalOrderId)).toMatchObject({
+        ledgerKind: "corrected-original",
+        correctionReason: "Correction automatique de test",
+      });
+      expect(historyById.get(body.correction.refundOrderId)).toMatchObject({
+        ledgerKind: "correction-refund",
+        correctionReason: "Correction automatique de test",
+      });
+      expect(historyById.get(body.correction.replacementOrderId)).toMatchObject({
+        ledgerKind: "correction-replacement",
+        correctionReason: "Correction automatique de test",
+      });
+
       const countAfterCorrection = await getOrderCount();
       const retry = await client.api.v1["order-corrections"].apply.$post(
         {

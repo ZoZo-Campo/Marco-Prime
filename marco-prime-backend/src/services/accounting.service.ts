@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const rowSchema = z.object({
   id: z.string().uuid(),
+  productId: z.number().int().positive().nullable().default(null),
   label: z.string(),
   liters: z.string(),
   purchasePricePerLiter: z.string(),
@@ -21,7 +22,7 @@ const storedSchema = z.object({
 export type AccountingInput = {
   eventName: string;
   eventDate: string;
-  rows: Array<z.infer<typeof rowSchema>>;
+  rows: Array<Omit<z.infer<typeof rowSchema>, "productId"> & { productId: number }>;
 };
 
 const emptyAccounting = (): z.infer<typeof storedSchema> => ({

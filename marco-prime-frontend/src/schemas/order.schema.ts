@@ -29,6 +29,7 @@ export const orderSchema = z.object({
     "correction-replacement",
   ]).optional(),
   correctionOriginalOrderId: z.number().int().positive().nullable().optional(),
+  correctionReason: z.string().nullable().optional(),
 });
 
 export const orderListResponseSchema = z.object({

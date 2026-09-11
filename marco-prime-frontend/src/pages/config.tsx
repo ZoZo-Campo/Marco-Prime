@@ -5,7 +5,6 @@ import {
   Calculator,
   Check,
   CreditCard,
-  PencilLine,
   Loader2,
   Save,
   ShieldAlert,
@@ -26,12 +25,11 @@ import { Card } from "../components/ui/card";
 import { StatisticsPanel } from "../components/features/config/statistics-panel";
 import { WifiPanel } from "../components/features/config/wifi-panel";
 import { AccountingPanel } from "../components/features/config/accounting-panel";
-import { OrderCorrectionsPanel } from "../components/features/config/order-corrections-panel";
 
 export const CONFIG_ROUTE_URL = "/config";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-type AdminSection = "catalog" | "statistics" | "accounting" | "corrections" | "wifi";
+type AdminSection = "catalog" | "statistics" | "accounting" | "wifi";
 
 export function ConfigPage() {
   return (
@@ -192,12 +190,6 @@ function ConfigContent() {
         <Calculator class="size-5" /> Compta
       </Button>
       <Button
-        variant={section === "corrections" ? "default" : "outline"}
-        onClick={() => setSection("corrections")}
-      >
-        <PencilLine class="size-5" /> Corrections
-      </Button>
-      <Button
         variant={section === "wifi" ? "default" : "outline"}
         onClick={() => setSection("wifi")}
       >
@@ -232,15 +224,6 @@ function ConfigContent() {
       <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
         {adminNavigation}
         <AccountingPanel adminCardNumber={member.cardNumber} />
-      </div>
-    );
-  }
-
-  if (section === "corrections") {
-    return (
-      <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
-        {adminNavigation}
-        <OrderCorrectionsPanel adminCardNumber={member.cardNumber} />
       </div>
     );
   }

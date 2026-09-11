@@ -6,6 +6,7 @@ import { Button } from "../../ui/button";
 import { Card } from "../../ui/card";
 import { Skeleton } from "../../ui/skeleton";
 import { HistoryItem } from "./history-item";
+import { OrderCorrectionForm } from "./order-correction-form";
 
 function HistoryListSkeleton() {
   return (
@@ -43,6 +44,7 @@ interface HistoryListProps {
   loadMoreError: Error | null;
   onLoadMore: () => void;
   onRetry: () => void;
+  onCorrectionComplete: () => void;
 }
 
 export function HistoryList({
@@ -53,6 +55,7 @@ export function HistoryList({
   loadMoreError,
   onLoadMore,
   onRetry,
+  onCorrectionComplete,
 }: HistoryListProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
@@ -119,7 +122,7 @@ export function HistoryList({
       ) : null}
       {selectedOrder && (
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6"
           role="presentation"
           onClick={() => setSelectedOrderId(null)}
         >
@@ -127,7 +130,7 @@ export function HistoryList({
             role="dialog"
             aria-modal="true"
             aria-labelledby="transaction-title"
-            class="w-full max-w-xl rounded-xl border bg-card p-6 shadow-2xl"
+            class="max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-xl border bg-card p-5 pb-2 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6 sm:pb-2"
             onClick={(event) => event.stopPropagation()}
           >
             <div class="mb-6 flex items-center justify-between">
@@ -153,10 +156,33 @@ export function HistoryList({
               previousBalance={selectedBalances?.previousBalance ?? null}
               newBalance={selectedBalances?.newBalance ?? null}
             />
+            {canCorrect(selectedOrder) && (
+              <OrderCorrectionForm
+                order={selectedOrder}
+                onComplete={() => {
+                  setSelectedOrderId(null);
+                  onCorrectionComplete();
+                }}
+              />
+            )}
+            {!canCorrect(selectedOrder) &&
+              selectedOrder.ledgerKind === "corrected-original" && (
+                <p class="mt-6 border-t pt-5 text-center text-muted-foreground">
+                  Cette vente a déjà été corrigée.
+                </p>
+              )}
           </div>
         </div>
       )}
     </Card>
+  );
+}
+
+function canCorrect(order: OrderSchema) {
+  return (
+    order.product !== null &&
+    Number(order.price) < 0 &&
+    (order.ledgerKind === undefined || order.ledgerKind === "purchase")
   );
 }
 
@@ -196,6 +222,9 @@ function TransactionDetail({
     ["Ancien solde", previousBalance ?? "Indisponible"],
     ["Nouveau solde", newBalance ?? "Indisponible"],
     ["Date", date],
+    ...(order.correctionReason
+      ? [["Raison de la correction", order.correctionReason]]
+      : []),
   ];
 
   return (

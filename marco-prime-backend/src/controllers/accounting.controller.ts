@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { MemberRepository } from "../repositories/member.repository.js";
 import { accountingService, accountingView } from "../services/accounting.service.js";
 import { auditEvent } from "../config/logger.js";
+import { StatisticsRepository } from "../repositories/statistics.repository.js";
 import type { accountingReadSchema, accountingUpdateSchema } from "../validators/accounting.validator.js";
 
 type ReadRequest = z.infer<typeof accountingReadSchema>;
@@ -11,6 +12,7 @@ type UpdateRequest = z.infer<typeof accountingUpdateSchema>;
 
 export class AccountingController {
   private members = new MemberRepository();
+  private statistics = new StatisticsRepository();
 
   async get(c: Context) {
     const request = c.req.valid("json" as never) as ReadRequest;
@@ -21,7 +23,20 @@ export class AccountingController {
   async update(c: Context) {
     const request = c.req.valid("json" as never) as UpdateRequest;
     const admin = await this.requireAdmin(request.adminCardNumber);
-    const saved = await accountingService.replace(request);
+    const products = await this.statistics.findProducts();
+    const productNames = new Map(
+      products.map((product) => [product.id, product.name]),
+    );
+    if (request.rows.some((row) => !productNames.has(row.productId))) {
+      throw new HTTPException(400, { message: "Unknown accounting product" });
+    }
+    const saved = await accountingService.replace({
+      ...request,
+      rows: request.rows.map((row) => ({
+        ...row,
+        label: productNames.get(row.productId)!,
+      })),
+    });
     auditEvent("accounting.updated", { adminMemberId: admin.id, rows: saved.rows.length, eventDate: saved.eventDate });
     return c.json(accountingView(saved));
   }
