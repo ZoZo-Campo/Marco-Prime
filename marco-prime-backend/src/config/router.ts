@@ -8,6 +8,8 @@ import { RechargeController } from "../controllers/recharge.controller.js";
 import { StatisticsController } from "../controllers/statistics.controller.js";
 import { SystemController } from "../controllers/system.controller.js";
 import { WifiController } from "../controllers/wifi.controller.js";
+import { AccountingController } from "../controllers/accounting.controller.js";
+import { OrderCorrectionController } from "../controllers/order-correction.controller.js";
 import { cardNumberParamSchema } from "../validators/members.validator.js";
 import { paginationQuerySchema } from "../validators/orders.validator.js";
 import {
@@ -23,6 +25,8 @@ import {
   statisticsQuerySchema,
 } from "../validators/statistics.validator.js";
 import { wifiAdminSchema, wifiConnectSchema } from "../validators/wifi.validator.js";
+import { accountingReadSchema, accountingUpdateSchema } from "../validators/accounting.validator.js";
+import { correctionListSchema, correctionRequestSchema } from "../validators/order-correction.validator.js";
 
 const memberController = new MemberController();
 const productController = new ProductController();
@@ -32,6 +36,8 @@ const rechargeController = new RechargeController();
 const statisticsController = new StatisticsController();
 const systemController = new SystemController();
 const wifiController = new WifiController();
+const accountingController = new AccountingController();
+const correctionController = new OrderCorrectionController();
 
 const router = new Hono()
   .get("/system/status", (c) => systemController.getStatus(c))
@@ -80,6 +86,18 @@ const router = new Hono()
     "/statistics/costs",
     zValidator("json", statisticsCostUpdateSchema),
     (c) => statisticsController.updateCosts(c),
+  )
+  .post("/accounting", zValidator("json", accountingReadSchema), (c) =>
+    accountingController.get(c),
+  )
+  .put("/accounting", zValidator("json", accountingUpdateSchema), (c) =>
+    accountingController.update(c),
+  )
+  .post("/order-corrections", zValidator("json", correctionListSchema), (c) =>
+    correctionController.list(c),
+  )
+  .post("/order-corrections/apply", zValidator("json", correctionRequestSchema), (c) =>
+    correctionController.apply(c),
   )
   .post("/purchase", zValidator("json", purchaseRequestSchema), (c) =>
     purchaseController.createPurchase(c),

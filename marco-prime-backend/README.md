@@ -120,6 +120,15 @@ Une documentation Swagger UI interactive est disponible une fois le serveur dém
 ### Commandes
 - `GET /api/v1/history` - Historique des commandes (paginé)
 - `POST /api/v1/purchase` - Créer un achat
+- `POST /api/v1/order-corrections` - Lister les ventes récentes corrigibles (administrateur)
+- `POST /api/v1/order-corrections/apply` - Annuler ou remplacer une vente (administrateur)
+
+Une correction conserve la vente d’origine pour l’audit. Dans une même
+transaction MySQL, Marco rembourse intégralement cette vente, crée
+éventuellement la ligne de remplacement et ajuste le solde une seule fois. Le
+journal local `order-corrections.json` empêche de corriger deux fois la même
+vente. Une correction laissée dans l’état `pending` après une coupure doit être
+vérifiée par un administrateur avant toute intervention manuelle.
 
 ### Statistiques (carte administrateur requise)
 - `POST /api/v1/statistics` - Calculer recettes, coûts et bénéfice sur une période
@@ -129,6 +138,16 @@ Une documentation Swagger UI interactive est disponible une fois le serveur dém
 Les prix d'achat sont conservés dans `product-costs.json` sous
 `MARCO_DATA_DIR`. Ils ne modifient jamais la base Fouaille. Les rechargements
 sont présentés séparément des recettes de vente.
+
+### Compta réelle (carte administrateur requise)
+- `POST /api/v1/accounting` - Lire le tableau de comptabilité locale
+- `PUT /api/v1/accounting` - Enregistrer le tableau de comptabilité locale
+
+Ce tableau est volontairement indépendant des ventes théoriques de Marco. Les
+litres réellement mesurés, le prix d’achat par litre et les recettes réelles
+sont saisis manuellement. Marco calcule seulement le coût total et le résultat
+(`recettes - coût`). Il n’y a ni HT, ni TVA, ni brut/net. Les données sont
+conservées dans `accounting.json` sous `MARCO_DATA_DIR`.
 
 ### Recharges
 - `POST /api/v1/recharge` - Recharger le solde d'un membre
