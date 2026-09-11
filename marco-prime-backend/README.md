@@ -155,7 +155,9 @@ sont saisis manuellement. Marco calcule seulement le coût total et le résultat
 conservées dans `accounting.json` sous `MARCO_DATA_DIR`. Chaque ligne référence
 un produit réel du catalogue Fouaille. Le tableau peut être exporté en CSV
 depuis l’interface ; Chromium demande alors l’emplacement où enregistrer le
-fichier lorsque son sélecteur de fichiers est disponible.
+fichier lorsque son sélecteur de fichiers est disponible. Les derniers prix
+d’achat au litre strictement positifs sont mémorisés dans ce même fichier par
+produit et préremplis lors des prochaines soirées.
 
 ### Recharges
 - `POST /api/v1/recharge` - Recharger le solde d'un membre

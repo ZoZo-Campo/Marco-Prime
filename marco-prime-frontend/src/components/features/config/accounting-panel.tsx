@@ -56,6 +56,9 @@ interface SavePickerWindow extends Window {
 export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
   const [accounting, setAccounting] = useState<Accounting | null>(null);
   const [products, setProducts] = useState<ProductCost[]>([]);
+  const [purchasePriceDefaults, setPurchasePriceDefaults] = useState<
+    Map<number, string>
+  >(new Map());
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [rows, setRows] = useState<EditableRow[]>([]);
@@ -89,6 +92,14 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
       );
       setAccounting(value);
       setProducts(catalogue);
+      setPurchasePriceDefaults(
+        new Map(
+          value.productDefaults.map((entry) => [
+            entry.productId,
+            entry.purchasePricePerLiter,
+          ]),
+        ),
+      );
       setEventName(value.eventName);
       setEventDate(value.eventDate);
       setRows(
@@ -144,8 +155,21 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
   const chooseProduct = (rowId: string, value: string) => {
     const productId = Number(value);
     const product = products.find((item) => item.id === productId);
-    updateRow(rowId, "productId", product?.id ?? null);
-    if (product) updateRow(rowId, "label", product.name);
+    setRows((current) =>
+      current.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              productId: product?.id ?? null,
+              label: product?.name ?? "",
+              purchasePricePerLiter: product
+                ? (purchasePriceDefaults.get(product.id) ?? "0")
+                : "0",
+            }
+          : row,
+      ),
+    );
+    setMessage(null);
   };
 
   const addProduct = () => {
@@ -164,7 +188,8 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
         productId: product.id,
         label: product.name,
         liters: "0",
-        purchasePricePerLiter: "0",
+        purchasePricePerLiter:
+          purchasePriceDefaults.get(product.id) ?? "0",
         revenue: "0",
       },
     ]);
@@ -220,6 +245,14 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const value = accountingSchema.parse(await response.json());
       setAccounting(value);
+      setPurchasePriceDefaults(
+        new Map(
+          value.productDefaults.map((entry) => [
+            entry.productId,
+            entry.purchasePricePerLiter,
+          ]),
+        ),
+      );
       setRows(
         value.rows.map(
           ({
@@ -312,6 +345,10 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
             <p class="mt-1 text-muted-foreground">
               Choisissez les produits Fouaille, puis saisissez les litres et
               recettes réellement constatés.
+            </p>
+            <p class="mt-1 text-sm text-muted-foreground">
+              Les prix d’achat par litre positifs sont mémorisés localement et
+              préremplis lors des prochaines soirées.
             </p>
           </div>
           <label class="flex flex-col gap-1 text-sm">

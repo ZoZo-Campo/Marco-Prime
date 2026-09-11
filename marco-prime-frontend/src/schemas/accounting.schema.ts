@@ -19,6 +19,12 @@ export const accountingSchema = z.object({
   eventName: z.string(),
   eventDate: z.string(),
   rows: z.array(accountingRowSchema),
+  productDefaults: z.array(
+    z.object({
+      productId: z.number().int().positive(),
+      purchasePricePerLiter: decimalStringSchema,
+    }),
+  ),
   updatedAt: z.string().datetime(),
   totals: z.object({
     liters: decimalStringSchema,

@@ -11,11 +11,17 @@ const rowSchema = z.object({
   revenue: z.string(),
 });
 
+const productDefaultSchema = z.object({
+  productId: z.number().int().positive(),
+  purchasePricePerLiter: z.string(),
+});
+
 const storedSchema = z.object({
   version: z.literal(1),
   eventName: z.string(),
   eventDate: z.string(),
   rows: z.array(rowSchema),
+  productDefaults: z.array(productDefaultSchema).default([]),
   updatedAt: z.string().datetime(),
 });
 
@@ -30,6 +36,7 @@ const emptyAccounting = (): z.infer<typeof storedSchema> => ({
   eventName: "Soirée Marco",
   eventDate: new Date().toISOString().slice(0, 10),
   rows: [],
+  productDefaults: [],
   updatedAt: new Date().toISOString(),
 });
 
@@ -55,6 +62,21 @@ class AccountingService {
   }
 
   async replace(input: AccountingInput) {
+    const current = await this.get();
+    const productDefaults = new Map(
+      current.productDefaults.map((entry) => [
+        entry.productId,
+        entry.purchasePricePerLiter,
+      ]),
+    );
+    for (const row of input.rows) {
+      if (Number(row.purchasePricePerLiter) > 0) {
+        productDefaults.set(
+          row.productId,
+          normalize(row.purchasePricePerLiter, 4),
+        );
+      }
+    }
     const value = storedSchema.parse({
       version: 1,
       eventName: input.eventName.trim(),
@@ -66,6 +88,12 @@ class AccountingService {
         purchasePricePerLiter: normalize(row.purchasePricePerLiter, 4),
         revenue: normalize(row.revenue, 2),
       })),
+      productDefaults: [...productDefaults]
+        .map(([productId, purchasePricePerLiter]) => ({
+          productId,
+          purchasePricePerLiter,
+        }))
+        .sort((left, right) => left.productId - right.productId),
       updatedAt: new Date().toISOString(),
     });
     await atomicWrite(this.filePath, value);

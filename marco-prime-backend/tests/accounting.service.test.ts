@@ -52,9 +52,52 @@ describe("AccountingService", () => {
     expect(view.totals.cost).toBe("210.76");
     expect(view.totals.revenue).toBe("77.00");
     expect(view.totals.result).toBe("-133.76");
+    expect(view.productDefaults).toEqual([
+      { productId: 1, purchasePricePerLiter: "3.14" },
+      { productId: 2, purchasePricePerLiter: "6.17" },
+    ]);
 
     accountingService.resetForTests();
     expect((await accountingService.get()).eventName).toBe("Soirée test");
     expect(JSON.parse(await readFile(path.join(directory, "accounting.json"), "utf8"))).not.toHaveProperty("vat");
+  });
+
+  it("keeps positive per-liter prices for future events in the same file", async () => {
+    await accountingService.replace({
+      eventName: "Première soirée",
+      eventDate: "2030-01-01",
+      rows: [
+        {
+          id: "f31efb78-158b-4f28-914f-8f42c86e98f9",
+          productId: 1,
+          label: "Primus",
+          liters: "10",
+          purchasePricePerLiter: "3.14",
+          revenue: "40",
+        },
+      ],
+    });
+
+    const next = await accountingService.replace({
+      eventName: "Soirée suivante",
+      eventDate: "2030-02-01",
+      rows: [
+        {
+          id: "5c74c5c7-461e-41dc-a6e1-09c084b52a93",
+          productId: 1,
+          label: "Primus",
+          liters: "0",
+          purchasePricePerLiter: "0",
+          revenue: "0",
+        },
+      ],
+    });
+
+    expect(next.productDefaults).toEqual([
+      { productId: 1, purchasePricePerLiter: "3.14" },
+    ]);
+    expect(
+      await readFile(path.join(directory, "accounting.json"), "utf8"),
+    ).toContain('"productDefaults"');
   });
 });
