@@ -5,6 +5,7 @@ import type z from "zod";
 import { useApi } from "../hooks/use-api";
 import { useRfid } from "../hooks/use-rfid";
 import { memberSchema } from "../schemas/member.schema";
+import type { MemberSchema } from "../schemas/member.schema";
 import { apiUrl } from "../config/api";
 
 const MemberContext = createContext<{
@@ -17,6 +18,7 @@ const MemberContext = createContext<{
   clear: () => void;
   pause: () => void;
   resume: () => void;
+  select: (member: MemberSchema) => void;
 } | null>(null);
 
 export function useMember() {
@@ -31,6 +33,9 @@ export function MemberProvider({
   disabled = false,
 }: PropsWithChildren<{ disabled?: boolean }>) {
   const [paused, setPaused] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<MemberSchema | null>(
+    null,
+  );
   const {
     value: memberCardId,
     scanId,
@@ -42,21 +47,32 @@ export function MemberProvider({
     apiUrl(`member/${memberCardId}`),
     { immediate: false },
   );
-  const data =
+  const scannedMember =
     memberCardId !== undefined &&
     fetchedMember?.cardNumber === Number(memberCardId)
       ? fetchedMember
       : null;
+  const data = selectedMember ?? scannedMember;
 
   useEffect(() => {
-    if (memberCardId) refetch();
+    if (memberCardId) {
+      setSelectedMember(null);
+      refetch();
+    }
   }, [memberCardId, scanId]);
 
   const pause = () => setPaused(true);
   const resume = () => setPaused(false);
   const clear = () => {
+    setSelectedMember(null);
     clearRfid();
     reset();
+  };
+  const select = (member: MemberSchema) => {
+    clearRfid();
+    reset();
+    setSelectedMember(member);
+    setPaused(false);
   };
 
   return (
@@ -71,6 +87,7 @@ export function MemberProvider({
         clear,
         pause,
         resume,
+        select,
       }}
     >
       {children}

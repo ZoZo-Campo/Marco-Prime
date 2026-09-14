@@ -11,5 +11,7 @@ export const memberSchema = z.object({
   admin: z.coerce.boolean(),
 });
 
+export const memberListSchema = z.array(memberSchema);
+
 // Type exporté pour utilisation dans les composants
 export type MemberSchema = z.infer<typeof memberSchema>;

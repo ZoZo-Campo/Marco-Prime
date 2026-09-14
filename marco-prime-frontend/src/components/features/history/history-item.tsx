@@ -30,7 +30,7 @@ export function HistoryItem({
   const productName = isRefund
     ? `Remboursement correction #${order.correctionOriginalOrderId}`
     : order.product?.name ?? "Rechargement";
-  const ledgerAmount = Number(order.price);
+  const ledgerAmount = Number(order.effectivePrice);
   const formattedAmount = Number.isFinite(ledgerAmount)
     ? `${ledgerAmount > 0 ? "+" : ""}${ledgerAmount.toFixed(2)} EUR`
     : "Montant invalide";
@@ -61,12 +61,18 @@ export function HistoryItem({
         {formattedAmount}
       </span>
       <span class="text-right tabular-nums text-muted-foreground">
-        {previousBalance ?? "—"}
+        {formatBalance(previousBalance)}
       </span>
       <span class="text-right tabular-nums font-medium">
-        {newBalance ?? "—"}
+        {formatBalance(newBalance)}
       </span>
       <span class="text-right text-muted-foreground">{formattedDate}</span>
     </button>
   );
+}
+
+function formatBalance(value: string | null) {
+  if (value === null) return "—";
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `${amount.toFixed(2)} €` : "—";
 }

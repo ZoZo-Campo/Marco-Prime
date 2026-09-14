@@ -10,7 +10,7 @@ import { OrderCorrectionForm } from "./order-correction-form";
 
 function HistoryListSkeleton() {
   return (
-    <Card class="min-h-0 gap-0 py-0 overflow-auto">
+    <Card class="min-h-0 flex-1 gap-0 py-0 overflow-auto">
       <div class="grid min-w-[60rem] grid-cols-[minmax(10rem,1.4fr)_minmax(9rem,1.4fr)_7rem_7rem_7rem_7rem] items-center gap-4 border-b px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <span>Membre</span>
         <span>Opération</span>
@@ -71,14 +71,10 @@ export function HistoryList({
     );
   }
 
-  const balancesByOrder = calculateBalances(orders);
   const selectedOrder = orders.find((order) => order.id === selectedOrderId);
-  const selectedBalances = selectedOrder
-    ? balancesByOrder.get(selectedOrder.id)
-    : undefined;
 
   return (
-    <Card class="min-h-0 gap-0 py-0 overflow-auto">
+    <Card class="min-h-0 flex-1 gap-0 py-0 overflow-auto">
       <div class="sticky top-0 z-10 grid min-w-[60rem] grid-cols-[minmax(10rem,1.4fr)_minmax(9rem,1.4fr)_7rem_7rem_7rem_7rem] items-center gap-4 border-b bg-card px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         <span>Membre</span>
         <span>Opération</span>
@@ -91,8 +87,8 @@ export function HistoryList({
         <HistoryItem
           key={order.id}
           order={order}
-          previousBalance={balancesByOrder.get(order.id)?.previousBalance ?? null}
-          newBalance={balancesByOrder.get(order.id)?.newBalance ?? null}
+          previousBalance={order.previousBalance}
+          newBalance={order.newBalance}
           onSelect={() => setSelectedOrderId(order.id)}
         />
       ))}
@@ -153,8 +149,8 @@ export function HistoryList({
             </div>
             <TransactionDetail
               order={selectedOrder}
-              previousBalance={selectedBalances?.previousBalance ?? null}
-              newBalance={selectedBalances?.newBalance ?? null}
+              previousBalance={selectedOrder.previousBalance}
+              newBalance={selectedOrder.newBalance}
             />
             {canCorrect(selectedOrder) && (
               <OrderCorrectionForm
@@ -209,7 +205,7 @@ function TransactionDetail({
               : ""
         }`
       : "Rechargement";
-  const amount = Number(order.price);
+  const amount = Number(order.effectivePrice);
   const date = new Date(order.date).toLocaleString("fr-FR", {
     dateStyle: "full",
     timeStyle: "short",
@@ -218,9 +214,9 @@ function TransactionDetail({
   const rows = [
     ["Membre", memberName],
     ["Opération", operation],
-    ["Montant enregistré", Number.isFinite(amount) ? `${amount.toFixed(2)} €` : "—"],
-    ["Ancien solde", previousBalance ?? "Indisponible"],
-    ["Nouveau solde", newBalance ?? "Indisponible"],
+    ["Montant", Number.isFinite(amount) ? `${amount.toFixed(2)} €` : "—"],
+    ["Ancien solde", formatBalance(previousBalance)],
+    ["Nouveau solde", formatBalance(newBalance)],
     ["Date", date],
     ...(order.correctionReason
       ? [["Raison de la correction", order.correctionReason]]
@@ -239,44 +235,8 @@ function TransactionDetail({
   );
 }
 
-interface HistoricalBalance {
-  previousBalance: string;
-  newBalance: string;
-}
-
-function calculateBalances(orders: OrderSchema[]) {
-  const runningBalances = new Map<number, number>();
-  const balancesByOrder = new Map<number, HistoricalBalance>();
-
-  for (const order of orders) {
-    if (!order.member) continue;
-
-    const memberId = order.member.id;
-    const currentBalance = runningBalances.get(memberId)
-      ?? toCents(order.member.balance);
-    if (currentBalance === null) continue;
-
-    const storedAmount = toCents(order.price);
-    if (storedAmount === null) continue;
-
-    const previousBalance = currentBalance - storedAmount;
-
-    balancesByOrder.set(order.id, {
-      previousBalance: fromCents(previousBalance),
-      newBalance: fromCents(currentBalance),
-    });
-    runningBalances.set(memberId, previousBalance);
-  }
-
-  return balancesByOrder;
-}
-
-function toCents(value: string) {
-  if (!/^-?\d+(?:\.\d{1,2})?$/.test(value)) return null;
-  const cents = Math.round(Number(value) * 100);
-  return Number.isSafeInteger(cents) ? cents : null;
-}
-
-function fromCents(value: number) {
-  return `${(value / 100).toFixed(2)} €`;
+function formatBalance(value: string | null) {
+  if (value === null) return "Indisponible";
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `${amount.toFixed(2)} €` : "Indisponible";
 }

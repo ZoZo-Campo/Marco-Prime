@@ -1,14 +1,35 @@
-import { count, desc, eq, inArray } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  like,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members, orders, products } from "../db/schema.js";
 
 export class OrderRepository {
-  async countAll() {
-    const [{ total }] = await db.select({ total: count() }).from(orders);
+  async countAll(filters: OrderHistoryFilters = {}) {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(orders)
+      .leftJoin(products, eq(orders.productId, products.id))
+      .leftJoin(members, eq(orders.memberId, members.id))
+      .where(historyCondition(filters));
     return total;
   }
 
-  async findMany(limit: number, offset: number) {
+  async findMany(
+    limit: number,
+    offset: number,
+    filters: OrderHistoryFilters = {},
+  ) {
     return await db
       .select({
         id: orders.id,
@@ -29,8 +50,25 @@ export class OrderRepository {
       .from(orders)
       .leftJoin(products, eq(orders.productId, products.id))
       .leftJoin(members, eq(orders.memberId, members.id))
+      .where(historyCondition(filters))
       .limit(limit)
       .offset(offset)
+      .orderBy(desc(orders.date), desc(orders.id));
+  }
+
+  async findLedgerByMemberIds(memberIds: number[]) {
+    if (memberIds.length === 0) return [];
+    return await db
+      .select({
+        id: orders.id,
+        memberId: orders.memberId,
+        productId: orders.productId,
+        price: orders.price,
+        amount: orders.amount,
+        date: orders.date,
+      })
+      .from(orders)
+      .where(inArray(orders.memberId, memberIds))
       .orderBy(desc(orders.date), desc(orders.id));
   }
 
@@ -378,6 +416,38 @@ export class OrderRepository {
       };
     });
   }
+}
+
+export interface OrderHistoryFilters {
+  search?: string;
+  from?: Date;
+  to?: Date;
+}
+
+function historyCondition(filters: OrderHistoryFilters) {
+  const conditions: SQL[] = [];
+  if (filters.from) conditions.push(gte(orders.date, filters.from));
+  if (filters.to) conditions.push(lt(orders.date, filters.to));
+
+  const search = filters.search?.trim();
+  if (search) {
+    const pattern = `%${search}%`;
+    const orderId = /^\d+$/.test(search) ? Number(search) : null;
+    conditions.push(
+      or(
+        like(members.firstName, pattern),
+        like(members.lastName, pattern),
+        like(products.name, pattern),
+        sql`concat(${members.firstName}, ' ', ${members.lastName}) like ${pattern}`,
+        sql`concat(${members.lastName}, ' ', ${members.firstName}) like ${pattern}`,
+        ...(orderId !== null && Number.isSafeInteger(orderId)
+          ? [eq(orders.id, orderId)]
+          : []),
+      )!,
+    );
+  }
+
+  return conditions.length > 0 ? and(...conditions) : undefined;
 }
 
 const MAX_DATABASE_MONEY_CENTS = 9_999_999_999;

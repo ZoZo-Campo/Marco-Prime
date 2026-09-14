@@ -107,6 +107,19 @@ export const openApiSpec = {
         },
       },
     },
+    "/api/v1/members/search": {
+      post: {
+        summary: "Search members by name",
+        description:
+          "Administrator-only member lookup used when a customer has no RFID card",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Matching card-enabled members" },
+          "403": { description: "Administrator card required" },
+        },
+      },
+    },
     "/api/v1/products": {
       get: {
         summary: "Get all products",
@@ -232,6 +245,22 @@ export const openApiSpec = {
             in: "query",
             schema: { type: "integer", default: 20 },
           },
+          {
+            name: "search",
+            in: "query",
+            description: "Member name, product name or exact transaction number",
+            schema: { type: "string", maxLength: 100 },
+          },
+          {
+            name: "from",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+          },
+          {
+            name: "to",
+            in: "query",
+            schema: { type: "string", format: "date-time" },
+          },
         ],
         responses: {
           "200": {
@@ -306,12 +335,26 @@ export const openApiSpec = {
       put: {
         summary: "Save the local real-world accounting table",
         description:
-          "Stores measured liters, purchase price per liter and actual revenue without modifying Fouaille",
+          "Stores the auto-saved accounting draft, its closure status, measured liters, purchase price per liter and actual revenue without modifying Fouaille",
         tags: ["Accounting"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": { description: "Accounting table saved" },
           "400": { description: "Invalid accounting row" },
+          "403": { description: "Administrator card required" },
+        },
+      },
+    },
+    "/api/v1/accounting/export": {
+      post: {
+        summary: "Export a complete evening data set",
+        description:
+          "Returns the local accounting table plus normalized sales, recharges and correction records for the requested range",
+        tags: ["Accounting"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Data used to generate the four CSV files and JSON backup" },
+          "400": { description: "Invalid date range" },
           "403": { description: "Administrator card required" },
         },
       },

@@ -155,6 +155,38 @@ describe("Statistics endpoints", () => {
     expect((await read.json()).rows[0]?.label).toBe(productName);
   });
 
+  it("exports accounting, sales, recharges and corrections for a date range", async () => {
+    const response = await client.api.v1.accounting.export.$post(
+      { json: { adminCardNumber, from, to } },
+      authenticatedOptions,
+    );
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(result.accounting).toHaveProperty("eventName");
+    expect(Array.isArray(result.sales)).toBe(true);
+    expect(Array.isArray(result.recharges)).toBe(true);
+    expect(Array.isArray(result.corrections)).toBe(true);
+  });
+
+  it("stores the accounting closure status", async () => {
+    const update = await client.api.v1.accounting.$put(
+      {
+        json: {
+          adminCardNumber,
+          status: "closed",
+          eventName: "Soirée clôturée",
+          eventDate: "2030-01-01",
+          rows: [],
+        },
+      },
+      authenticatedOptions,
+    );
+    expect(update.status).toBe(200);
+    const result = await update.json();
+    expect(result.status).toBe("closed");
+    expect(result.closedAt).not.toBeNull();
+  });
+
   it("rejects an accounting row linked to an unknown product", async () => {
     const response = await client.api.v1.accounting.$put(
       {

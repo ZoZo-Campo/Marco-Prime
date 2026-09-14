@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { TICKET_ROUTE_URL } from "./ticket";
 import { apiHeaders, apiUrl } from "../config/api";
+import { MemberSearch } from "../components/features/member/member-search";
 import {
   pendingRechargeSignal,
   rechargeAmountSignal,
@@ -228,6 +229,7 @@ function RechargeContent() {
                   : "Scannez une carte, ou saisissez son numéro puis appuyez sur Entrée."}
               </p>
             )}
+            <MemberSearch />
           </Card>
         )}
 

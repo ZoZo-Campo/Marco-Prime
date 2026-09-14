@@ -10,8 +10,8 @@ import { SystemController } from "../controllers/system.controller.js";
 import { WifiController } from "../controllers/wifi.controller.js";
 import { AccountingController } from "../controllers/accounting.controller.js";
 import { OrderCorrectionController } from "../controllers/order-correction.controller.js";
-import { cardNumberParamSchema } from "../validators/members.validator.js";
-import { paginationQuerySchema } from "../validators/orders.validator.js";
+import { cardNumberParamSchema, memberSearchSchema } from "../validators/members.validator.js";
+import { historyQuerySchema } from "../validators/orders.validator.js";
 import {
   catalogSelectionRequestSchema,
   productPaginationQuerySchema,
@@ -25,7 +25,7 @@ import {
   statisticsQuerySchema,
 } from "../validators/statistics.validator.js";
 import { wifiAdminSchema, wifiConnectSchema } from "../validators/wifi.validator.js";
-import { accountingReadSchema, accountingUpdateSchema } from "../validators/accounting.validator.js";
+import { accountingExportSchema, accountingReadSchema, accountingUpdateSchema } from "../validators/accounting.validator.js";
 import { correctionListSchema, correctionRequestSchema } from "../validators/order-correction.validator.js";
 
 const memberController = new MemberController();
@@ -55,6 +55,9 @@ const router = new Hono()
     zValidator("param", cardNumberParamSchema),
     (c) => memberController.getMemberByCardNumber(c),
   )
+  .post("/members/search", zValidator("json", memberSearchSchema), (c) =>
+    memberController.searchMembers(c),
+  )
   .get("/products", (c) => productController.getAllProducts(c))
   .get("/catalog-selection", (c) => productController.getCatalogSelection(c))
   .put(
@@ -69,7 +72,7 @@ const router = new Hono()
     zValidator("query", productPaginationQuerySchema),
     (c) => productController.getProductsByType(c),
   )
-  .get("/history", zValidator("query", paginationQuerySchema), (c) =>
+  .get("/history", zValidator("query", historyQuerySchema), (c) =>
     orderController.getOrdersHistory(c),
   )
   .post(
@@ -92,6 +95,11 @@ const router = new Hono()
   )
   .put("/accounting", zValidator("json", accountingUpdateSchema), (c) =>
     accountingController.update(c),
+  )
+  .post(
+    "/accounting/export",
+    zValidator("json", accountingExportSchema),
+    (c) => accountingController.export(c),
   )
   .post("/order-corrections", zValidator("json", correctionListSchema), (c) =>
     correctionController.list(c),

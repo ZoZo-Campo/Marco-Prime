@@ -12,9 +12,9 @@ import { apiHeaders, apiUrl } from "../../../config/api";
 import { MemberProvider, useMember } from "../../../contexts/member-context";
 import type { OrderSchema } from "../../../schemas/order.schema";
 import {
-  catalogSelectionSchema,
-  type CatalogSelectionProduct,
-} from "../../../schemas/product.schema";
+  productCostListSchema,
+  type ProductCost,
+} from "../../../schemas/statistics.schema";
 import { Button } from "../../ui/button";
 
 interface OrderCorrectionFormProps {
@@ -44,7 +44,7 @@ function OrderCorrectionEditor({
     pause,
     resume,
   } = useMember();
-  const [products, setProducts] = useState<CatalogSelectionProduct[]>([]);
+  const [products, setProducts] = useState<ProductCost[]>([]);
   const [replacementProductId, setReplacementProductId] = useState(
     String(order.product?.id ?? ""),
   );
@@ -74,10 +74,14 @@ function OrderCorrectionEditor({
     let cancelled = false;
     setProductsLoading(true);
     setError(null);
-    fetch(apiUrl("catalog-selection"), { headers: apiHeaders() })
+    fetch(apiUrl("statistics/costs"), {
+      method: "POST",
+      headers: apiHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ adminCardNumber: member.cardNumber }),
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return catalogSelectionSchema.parse(await response.json());
+        return productCostListSchema.parse(await response.json());
       })
       .then((catalogue) => {
         if (!cancelled) setProducts(catalogue);
@@ -209,6 +213,18 @@ function OrderCorrectionEditor({
     }
   };
 
+  const preview = correctionPreview(
+    order,
+    products.find((product) => product.id === Number(replacementProductId)),
+    Number(replacementAmount),
+  );
+  const availableProducts = products
+    .filter((product) => product.available)
+    .sort(compareProducts);
+  const unavailableOriginal = products.find(
+    (product) => !product.available && product.id === order.product?.id,
+  );
+
   return (
     <section class="mt-6 border-t pt-5">
       <div class="flex flex-wrap items-center justify-between gap-2">
@@ -239,11 +255,20 @@ function OrderCorrectionEditor({
                 setError(null);
               }}
             >
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name} · {product.price} €
-                </option>
-              ))}
+              <optgroup label="En vente actuellement">
+                {availableProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} · {product.sellingPrice} €
+                  </option>
+                ))}
+              </optgroup>
+              {unavailableOriginal && (
+                <optgroup label="Produit original hors vente">
+                  <option value={unavailableOriginal.id}>
+                    {unavailableOriginal.name} · {unavailableOriginal.sellingPrice} €
+                  </option>
+                </optgroup>
+              )}
             </select>
           </label>
           <label class="flex flex-col gap-2">
@@ -261,6 +286,29 @@ function OrderCorrectionEditor({
               }}
             />
           </label>
+          {preview && (
+            <div class="grid gap-3 rounded-lg border bg-muted/30 p-4 sm:col-span-2 sm:grid-cols-2">
+              <div>
+                <p class="text-sm text-muted-foreground">Avant</p>
+                <p class="text-lg font-semibold">
+                  {order.amount} × {order.product?.name}
+                </p>
+                <p class="text-sm">Débit : {preview.refunded}</p>
+              </div>
+              <div>
+                <p class="text-sm text-muted-foreground">Après correction</p>
+                <p class="text-lg font-semibold">
+                  {preview.amount} × {preview.productName}
+                </p>
+                <p class="text-sm">Débit corrigé : {preview.charged}</p>
+              </div>
+              <p class="border-t pt-3 sm:col-span-2">
+                Solde actuel : <strong>{preview.currentBalance}</strong>
+                <span class="mx-2">→</span>
+                Futur solde : <strong>{preview.futureBalance}</strong>
+              </p>
+            </div>
+          )}
           <label class="flex flex-col gap-2 sm:col-span-2">
             Raison de la correction
             <textarea
@@ -306,4 +354,37 @@ function OrderCorrectionEditor({
       </div>
     </section>
   );
+}
+
+function correctionPreview(
+  order: OrderSchema,
+  product: ProductCost | undefined,
+  amount: number,
+) {
+  if (!product || !Number.isInteger(amount) || amount < 1 || !order.member) {
+    return null;
+  }
+  const originalCents = Math.abs(Math.round(Number(order.price) * 100));
+  const currentBalanceCents = Math.round(Number(order.member.balance) * 100);
+  if (!Number.isSafeInteger(originalCents) || !Number.isSafeInteger(currentBalanceCents)) {
+    return null;
+  }
+  const unitCents =
+    product.id === order.product?.id && originalCents % order.amount === 0
+      ? originalCents / order.amount
+      : Math.round(Number(product.sellingPrice) * 100);
+  const chargedCents = unitCents * amount;
+  const futureBalanceCents = currentBalanceCents + originalCents - chargedCents;
+  return {
+    amount,
+    productName: product.name,
+    refunded: `${(originalCents / 100).toFixed(2)} €`,
+    charged: `${(chargedCents / 100).toFixed(2)} €`,
+    currentBalance: `${(currentBalanceCents / 100).toFixed(2)} €`,
+    futureBalance: `${(futureBalanceCents / 100).toFixed(2)} €`,
+  };
+}
+
+function compareProducts(left: ProductCost, right: ProductCost) {
+  return left.name.localeCompare(right.name, "fr", { sensitivity: "base" });
 }

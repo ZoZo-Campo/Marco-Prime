@@ -19,6 +19,9 @@ export const orderSchema = z.object({
     })
     .nullable(),
   price: moneyStringSchema,
+  effectivePrice: moneyStringSchema,
+  previousBalance: moneyStringSchema.nullable(),
+  newBalance: moneyStringSchema.nullable(),
   amount: z.coerce.number().int().positive(),
   date: z.string().datetime(),
   ledgerKind: z.enum([

@@ -109,6 +109,12 @@ Une documentation Swagger UI interactive est disponible une fois le serveur dém
 
 ### Membres
 - `GET /api/v1/member/:card_number` - Récupérer un membre par numéro de carte
+- `POST /api/v1/members/search` - Rechercher un membre par nom (carte administrateur requise)
+
+Dans les écrans d’achat et de rechargement, **Rechercher sans carte** ouvre un
+clavier tactile AZERTY intégré. Une carte administrateur doit d’abord autoriser
+la recherche ; le client choisi suit ensuite exactement le même parcours qu’un
+client identifié par RFID.
 
 ### Produits
 - `GET /api/v1/products` - Lister tous les produits
@@ -118,7 +124,7 @@ Une documentation Swagger UI interactive est disponible une fois le serveur dém
 - `PUT /api/v1/catalog-selection` - Remplacer la sélection locale (carte administrateur requise)
 
 ### Commandes
-- `GET /api/v1/history` - Historique des commandes (paginé)
+- `GET /api/v1/history` - Historique paginé, filtrable par nom, produit, date ou numéro de transaction
 - `POST /api/v1/purchase` - Créer un achat
 - `POST /api/v1/order-corrections` - Lister les ventes récentes corrigibles (administrateur)
 - `POST /api/v1/order-corrections/apply` - Annuler ou remplacer une vente (administrateur)
@@ -147,17 +153,29 @@ sont présentés séparément des recettes de vente.
 ### Compta réelle (carte administrateur requise)
 - `POST /api/v1/accounting` - Lire le tableau de comptabilité locale
 - `PUT /api/v1/accounting` - Enregistrer le tableau de comptabilité locale
+- `POST /api/v1/accounting/export` - Préparer l’export complet d’une soirée
 
 Ce tableau est volontairement indépendant des ventes théoriques de Marco. Les
 litres réellement mesurés, le prix d’achat par litre et les recettes réelles
 sont saisis manuellement. Marco calcule seulement le coût total et le résultat
 (`recettes - coût`). Il n’y a ni HT, ni TVA, ni brut/net. Les données sont
 conservées dans `accounting.json` sous `MARCO_DATA_DIR`. Chaque ligne référence
-un produit réel du catalogue Fouaille. Le tableau peut être exporté en CSV
-depuis l’interface ; Chromium demande alors l’emplacement où enregistrer le
-fichier lorsque son sélecteur de fichiers est disponible. Les derniers prix
-d’achat au litre strictement positifs sont mémorisés dans ce même fichier par
-produit et préremplis lors des prochaines soirées.
+un produit réel du catalogue Fouaille. Le brouillon s’enregistre automatiquement
+et indique son état à l’écran. **Préremplir depuis les ventes** récupère les
+recettes Marco entre 17 h et minuit, tout en laissant chaque montant modifiable.
+Les produits actuellement disponibles sont affichés avant les anciens produits
+ou produits hors vente.
+
+**Nouvelle soirée** remet à zéro la date, les litres et les recettes, avec le
+choix de conserver ou non les produits habituels. Les derniers prix d’achat au
+litre strictement positifs restent mémorisés. La clôture guidée vérifie les prix,
+les litres et l’export avant de verrouiller le bilan ; une soirée clôturée peut
+être rouverte explicitement.
+
+L’export complet demande un dossier à Chromium puis crée `compta.csv`,
+`ventes.csv`, `rechargements.csv`, `corrections.csv` et
+`sauvegarde-marco.json`. Si le sélecteur de dossier n’est pas disponible, les
+fichiers sont téléchargés dans le dossier configuré dans Chromium.
 
 ### Recharges
 - `POST /api/v1/recharge` - Recharger le solde d'un membre

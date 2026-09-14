@@ -11,6 +11,8 @@ export class StatisticsRepository {
         productName: products.name,
         category: productTypes.type,
         memberId: members.id,
+        memberFirstName: members.firstName,
+        memberLastName: members.lastName,
         price: orders.price,
         amount: orders.amount,
         date: orders.date,
@@ -30,8 +32,17 @@ export class StatisticsRepository {
 
   async findRecharges(from: Date, to: Date) {
     return await db
-      .select({ id: orders.id, price: orders.price, amount: orders.amount })
+      .select({
+        id: orders.id,
+        memberId: members.id,
+        memberFirstName: members.firstName,
+        memberLastName: members.lastName,
+        price: orders.price,
+        amount: orders.amount,
+        date: orders.date,
+      })
       .from(orders)
+      .leftJoin(members, eq(orders.memberId, members.id))
       .where(
         and(
           isNull(orders.productId),

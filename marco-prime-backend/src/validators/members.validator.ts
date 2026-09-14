@@ -25,3 +25,8 @@ export const cardNumberParamSchema = z.object({
       message: "Card number must be a positive safe integer",
     }),
 });
+
+export const memberSearchSchema = z.object({
+  adminCardNumber: z.number().int().positive().safe(),
+  query: z.string().trim().min(2).max(80),
+});

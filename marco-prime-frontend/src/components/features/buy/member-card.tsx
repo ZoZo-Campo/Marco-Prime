@@ -7,40 +7,56 @@ import type { memberSchema } from "../../../schemas/member.schema";
 import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
+import { MemberSearch } from "../member/member-search";
 
 export function MemberCard() {
-  const { data, loading, error, inputLength, retry } = useMember();
+  const { data, loading, error, inputLength, retry, clear } = useMember();
 
   if (loading) return <MemberCardLoading />;
-  if (error) return <MemberCardError retry={retry} />;
+  if (error) return <MemberCardError retry={retry} clear={clear} />;
   if (!data) return <NoMemberCard inputLength={inputLength} />;
 
   return <MemberCardLoaded member={data} />;
 }
 
-function MemberCardError({ retry }: { retry: () => Promise<void> }) {
+function MemberCardError({
+  retry,
+  clear,
+}: {
+  retry: () => Promise<void>;
+  clear: () => void;
+}) {
   return (
-    <Alert variant="destructive">
-      <AlertTitle>Carte non reconnue</AlertTitle>
-      <AlertDescription class="flex flex-col gap-2">
-        <span>Vérifiez la carte ou la connexion au serveur.</span>
-        <Button variant="outline" size="sm" onClick={() => void retry()}>
-          Réessayer
-        </Button>
-      </AlertDescription>
-    </Alert>
+    <div>
+      <Alert variant="destructive">
+        <AlertTitle>Carte non reconnue</AlertTitle>
+        <AlertDescription class="flex flex-col gap-2">
+          <span>Vérifiez la carte ou la connexion au serveur.</span>
+          <div class="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => void retry()}>
+              Réessayer
+            </Button>
+            <Button size="sm" onClick={clear}>Autre carte</Button>
+          </div>
+        </AlertDescription>
+      </Alert>
+      <MemberSearch />
+    </div>
   );
 }
 
 function NoMemberCard({ inputLength }: { inputLength: number }) {
   return (
-    <Alert variant={inputLength > 0 ? "default" : "destructive"}>
-      <AlertDescription>
-        {inputLength > 0
-          ? `Saisie en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}. Appuyez sur Entrée.`
-          : "Veuillez scanner une carte ou saisir son numéro puis appuyer sur Entrée."}
-      </AlertDescription>
-    </Alert>
+    <div>
+      <Alert variant={inputLength > 0 ? "default" : "destructive"}>
+        <AlertDescription>
+          {inputLength > 0
+            ? `Saisie en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}. Appuyez sur Entrée.`
+            : "Veuillez scanner une carte ou saisir son numéro puis appuyer sur Entrée."}
+        </AlertDescription>
+      </Alert>
+      <MemberSearch />
+    </div>
   );
 }
 

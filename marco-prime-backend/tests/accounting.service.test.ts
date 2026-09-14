@@ -23,6 +23,7 @@ describe("AccountingService", () => {
 
   it("stores measured liters and calculates simple totals without VAT", async () => {
     const saved = await accountingService.replace({
+      status: "draft",
       eventName: "Soirée test",
       eventDate: "2030-01-01",
       rows: [
@@ -64,6 +65,7 @@ describe("AccountingService", () => {
 
   it("keeps positive per-liter prices for future events in the same file", async () => {
     await accountingService.replace({
+      status: "draft",
       eventName: "Première soirée",
       eventDate: "2030-01-01",
       rows: [
@@ -79,6 +81,7 @@ describe("AccountingService", () => {
     });
 
     const next = await accountingService.replace({
+      status: "draft",
       eventName: "Soirée suivante",
       eventDate: "2030-02-01",
       rows: [
@@ -99,5 +102,37 @@ describe("AccountingService", () => {
     expect(
       await readFile(path.join(directory, "accounting.json"), "utf8"),
     ).toContain('"productDefaults"');
+  });
+
+  it("records closure and can reopen an event without losing its rows", async () => {
+    const input = {
+      eventName: "Soirée à clôturer",
+      eventDate: "2030-03-01",
+      rows: [
+        {
+          id: "f31efb78-158b-4f28-914f-8f42c86e98f9",
+          productId: 1,
+          label: "Primus",
+          liters: "10",
+          purchasePricePerLiter: "3.14",
+          revenue: "40",
+        },
+      ],
+    };
+
+    const closed = await accountingService.replace({
+      ...input,
+      status: "closed",
+    });
+    expect(closed.status).toBe("closed");
+    expect(closed.closedAt).not.toBeNull();
+
+    const reopened = await accountingService.replace({
+      ...input,
+      status: "draft",
+    });
+    expect(reopened.status).toBe("draft");
+    expect(reopened.closedAt).toBeNull();
+    expect(reopened.rows).toHaveLength(1);
   });
 });
