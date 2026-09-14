@@ -121,18 +121,19 @@ Si une administration distante est demandée plus tard, conserver ce bind et
 passer par un VPN ou un proxy HTTPS authentifié plutôt que d'exposer directement
 le service et MySQL.
 
-## Démarrage automatique sur Raspberry Pi 4
+## Lancement simplifié sur Raspberry Pi 4
 
-Sur Raspberry Pi OS Lite 64 bits, le script `install-raspberry-pi.sh` installe le
-minimum graphique nécessaire (Cage et Chromium), Docker et les deux services de
-démarrage. Il ouvre automatiquement la page Home sur le port 3001 en plein écran,
-seulement lorsque l'application et la base SQL répondent à `/ready`.
+Sur Raspberry Pi OS 64 bits avec bureau, le script `install-raspberry-pi.sh`
+installe Chromium, Docker et les dépendances puis crée le raccourci
+**Lancer Marco Prime** sur le Bureau. Docker et l’API peuvent redémarrer avec la
+machine, mais Chromium ne masque jamais le Bureau tant que ce raccourci n’a pas
+été lancé.
 
 Depuis la racine du projet copié sur le Raspberry :
 
 ```bash
-chmod +x install-raspberry-pi.sh
-sudo ./install-raspberry-pi.sh
+chmod +x install-raspberry-pi.sh lancer-marco.sh
+sudo ./install-raspberry-pi.sh "$USER"
 sudo reboot
 ```
 
@@ -143,9 +144,11 @@ le projet est installé depuis une session root, préciser explicitement le comp
 sudo ./install-raspberry-pi.sh NOM_UTILISATEUR
 ```
 
-Il copie l'application dans `/opt/marco-prime` et crée les services
-`marco-prime.service` et `marco-kiosk.service`. Aucun bureau complet n'est
-installé. L'administration reste disponible par SSH.
+Le projet reste dans son dossier actuel. Après le redémarrage, le raccourci ou
+la commande `./lancer-marco.sh` tente un `git pull --ff-only`, conserve la
+version locale en cas d’échec, reconstruit Docker, attend l’API puis ouvre Home
+dans Chromium en mode kiosque. Le bouton **Fermer Marco** dans Config ferme
+seulement Chromium et revient au Bureau ; Docker et l’API restent actifs.
 
 Docker recommande une politique de redémarrage pour les services persistants et
 permet des images multi-architectures ; Vite recommande de servir le dossier de

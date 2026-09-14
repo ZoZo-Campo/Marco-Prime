@@ -30,10 +30,10 @@ apt-get update
 . /etc/os-release
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   ca-certificates \
-  cage \
   chromium \
   curl \
   dbus-user-session \
+  git \
   network-manager \
   python3 \
   rsync
@@ -135,8 +135,32 @@ EOF
 systemctl daemon-reload
 systemctl enable marco-prime.service
 
+echo "Installation du lanceur Marco sur le Bureau…"
+chmod 0755 \
+  "${SCRIPT_DIR}/lancer-marco.sh" \
+  "${SCRIPT_DIR}/raspberry-pi/kiosk-control.py"
+ln -sfn "${SCRIPT_DIR}/lancer-marco.sh" /usr/local/bin/lancer-marco-prime
+
+KIOSK_HOME="$(getent passwd "${KIOSK_USER}" | cut -d: -f6)"
+KIOSK_GROUP="$(id -gn "${KIOSK_USER}")"
+DESKTOP_DIR="${KIOSK_HOME}/Desktop"
+install -d -m 0755 -o "${KIOSK_USER}" -g "${KIOSK_GROUP}" "${DESKTOP_DIR}"
+cat > "${DESKTOP_DIR}/Lancer Marco Prime.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Lancer Marco Prime
+Comment=Mettre à jour, démarrer et ouvrir Marco en plein écran
+Exec=/usr/local/bin/lancer-marco-prime
+Path=${SCRIPT_DIR}
+Icon=chromium
+Terminal=true
+Categories=Utility;
+EOF
+chown "${KIOSK_USER}:${KIOSK_GROUP}" "${DESKTOP_DIR}/Lancer Marco Prime.desktop"
+chmod 0755 "${DESKTOP_DIR}/Lancer Marco Prime.desktop"
+
 echo
 echo "Dépendances installées. Docker et l'API Marco démarreront automatiquement."
 echo "Redémarre la Raspberry pour activer l'accès Docker de ${KIOSK_USER}."
-echo "Le Bureau et Chromium restent manuels."
-echo "Après le redémarrage, ouvre http://127.0.0.1:3001/ dans Chromium."
+echo "Après le redémarrage, double-clique sur 'Lancer Marco Prime' sur le Bureau."
+echo "Le lanceur tente la mise à jour Git, reconstruit Docker puis ouvre Home en plein écran."

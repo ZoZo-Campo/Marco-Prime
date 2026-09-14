@@ -6,10 +6,12 @@ import {
   Check,
   CreditCard,
   Loader2,
+  Power,
   Save,
   ShieldAlert,
   ShoppingBasket,
   Wifi,
+  X,
 } from "lucide-preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { apiHeaders, apiUrl } from "../config/api";
@@ -30,6 +32,7 @@ export const CONFIG_ROUTE_URL = "/config";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type AdminSection = "catalog" | "statistics" | "accounting" | "wifi";
+const KIOSK_CONTROL_URL = "http://127.0.0.1:3210";
 
 export function ConfigPage() {
   return (
@@ -61,6 +64,30 @@ function ConfigContent() {
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [section, setSection] = useState<AdminSection>("catalog");
+  const [kioskControlAvailable, setKioskControlAvailable] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [closingKiosk, setClosingKiosk] = useState(false);
+  const [kioskExitError, setKioskExitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setKioskControlAvailable(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 1_500);
+    fetch(`${KIOSK_CONTROL_URL}/status`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((response) => setKioskControlAvailable(response.ok))
+      .catch(() => setKioskControlAvailable(false))
+      .finally(() => window.clearTimeout(timer));
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [isAdmin]);
 
   useEffect(() => {
     if (!catalog) return;
@@ -169,36 +196,122 @@ function ConfigContent() {
     }
   };
 
+  const closeKiosk = async () => {
+    setClosingKiosk(true);
+    setKioskExitError(null);
+    try {
+      const response = await fetch(`${KIOSK_CONTROL_URL}/exit`, {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch {
+      setClosingKiosk(false);
+      setKioskExitError(
+        "Impossible de fermer automatiquement. Utilisez Alt+F4.",
+      );
+    }
+  };
+
   const adminNavigation = (
-    <nav class="flex shrink-0 items-center gap-3 overflow-x-auto border-b bg-card px-7 py-3">
-      <Button
-        variant={section === "catalog" ? "default" : "outline"}
-        onClick={() => setSection("catalog")}
-      >
-        <ShoppingBasket class="size-5" /> Catalogue
-      </Button>
-      <Button
-        variant={section === "statistics" ? "default" : "outline"}
-        onClick={() => setSection("statistics")}
-      >
-        <BarChart3 class="size-5" /> Statistiques
-      </Button>
-      <Button
-        variant={section === "accounting" ? "default" : "outline"}
-        onClick={() => setSection("accounting")}
-      >
-        <Calculator class="size-5" /> Compta
-      </Button>
-      <Button
-        variant={section === "wifi" ? "default" : "outline"}
-        onClick={() => setSection("wifi")}
-      >
-        <Wifi class="size-5" /> Wi-Fi
-      </Button>
-      <span class="ml-auto shrink-0 text-sm text-muted-foreground">
-        {member.firstName} {member.lastName}
-      </span>
-    </nav>
+    <>
+      <nav class="flex shrink-0 items-center gap-3 overflow-x-auto border-b bg-card px-7 py-3">
+        <Button
+          variant={section === "catalog" ? "default" : "outline"}
+          onClick={() => setSection("catalog")}
+        >
+          <ShoppingBasket class="size-5" /> Catalogue
+        </Button>
+        <Button
+          variant={section === "statistics" ? "default" : "outline"}
+          onClick={() => setSection("statistics")}
+        >
+          <BarChart3 class="size-5" /> Statistiques
+        </Button>
+        <Button
+          variant={section === "accounting" ? "default" : "outline"}
+          onClick={() => setSection("accounting")}
+        >
+          <Calculator class="size-5" /> Compta
+        </Button>
+        <Button
+          variant={section === "wifi" ? "default" : "outline"}
+          onClick={() => setSection("wifi")}
+        >
+          <Wifi class="size-5" /> Wi-Fi
+        </Button>
+        <span class="ml-auto shrink-0 text-sm text-muted-foreground">
+          {member.firstName} {member.lastName}
+        </span>
+        {kioskControlAvailable && (
+          <Button
+            class="shrink-0"
+            variant="destructive"
+            onClick={() => {
+              setKioskExitError(null);
+              setShowExitDialog(true);
+            }}
+          >
+            <Power class="size-5" /> Fermer Marco
+          </Button>
+        )}
+      </nav>
+
+      {showExitDialog && (
+        <div class="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4">
+          <Card
+            class="w-full max-w-lg p-6 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="close-marco-title"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="close-marco-title" class="text-2xl font-bold">
+                  Fermer l’écran Marco ?
+                </h2>
+                <p class="mt-2 text-muted-foreground">
+                  Chromium sera fermé et le Bureau réapparaîtra. Docker et
+                  l’API continueront de fonctionner.
+                </p>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Annuler"
+                disabled={closingKiosk}
+                onClick={() => setShowExitDialog(false)}
+              >
+                <X />
+              </Button>
+            </div>
+            {kioskExitError && (
+              <p class="mt-4 text-destructive">{kioskExitError}</p>
+            )}
+            <div class="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                disabled={closingKiosk}
+                onClick={() => setShowExitDialog(false)}
+              >
+                Rester sur Marco
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={closingKiosk}
+                onClick={() => void closeKiosk()}
+              >
+                {closingKiosk ? (
+                  <Loader2 class="animate-spin" />
+                ) : (
+                  <Power />
+                )}
+                Fermer et revenir au Bureau
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </>
   );
 
   if (section === "statistics") {

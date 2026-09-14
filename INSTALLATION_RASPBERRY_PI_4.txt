@@ -47,6 +47,7 @@ Il faut notamment voir :
 - compose.orange-pi.yml
 - Dockerfile.orange-pi
 - install-raspberry-pi.sh
+- lancer-marco.sh
 - marco
 - marco-prime-backend
 - marco-prime-frontend
@@ -86,7 +87,7 @@ chmod 600 .env.orange-pi
 ÉTAPE 4 — RENDRE LES SCRIPTS EXÉCUTABLES
 -----------------------------------------
 
-chmod +x marco install-raspberry-pi.sh
+chmod +x marco install-raspberry-pi.sh lancer-marco.sh
 
 
 ÉTAPE 5 — INSTALLER LES DÉPENDANCES
@@ -94,8 +95,9 @@ chmod +x marco install-raspberry-pi.sh
 
 sudo ./install-raspberry-pi.sh "$USER"
 
-Cette étape installe Docker, Docker Compose, Chromium et Cage. Elle ne compile
-pas Marco Prime, ne lance pas Docker et ne configure aucun démarrage automatique.
+Cette étape installe Docker, Docker Compose et Chromium. Elle active le
+redémarrage automatique de Docker et de l'API, puis crée sur le Bureau le
+raccourci « Lancer Marco Prime ».
 
 Lorsque l'installation est terminée, redémarrer pour activer l'accès à Docker :
 
@@ -117,17 +119,26 @@ Si une erreur mentionne API_PORT, conserver API_PORT=3000 et modifier seulement
 MARCO_HOST_PORT si le port visible doit changer.
 
 
-ÉTAPE 7 — CONSTRUIRE ET LANCER MARCO MANUELLEMENT
---------------------------------------------------
+ÉTAPE 7 — LANCER MARCO
+-----------------------
 
-./marco start
+Double-cliquer sur « Lancer Marco Prime » sur le Bureau.
 
-Le premier lancement compile l'application et peut prendre plusieurs minutes.
-Ouvrir ensuite Chromium à cette adresse :
+Le lanceur :
 
-http://127.0.0.1:3001/
+- tente un git pull sans écraser les modifications locales ;
+- continue avec la version déjà présente si GitHub est inaccessible ;
+- reconstruit Docker et démarre l'API ;
+- attend que l'application réponde ;
+- ouvre automatiquement Home dans Chromium, en plein écran sans bordure.
 
-Marco Prime ne se lancera pas automatiquement au prochain démarrage.
+Le même lancement peut être effectué depuis le terminal graphique :
+
+./lancer-marco.sh
+
+Le premier lancement peut prendre plusieurs minutes. Dans Config, le bouton
+« Fermer Marco » ferme seulement Chromium et rend le Bureau visible. Docker et
+l'API restent actifs.
 
 
 ÉTAPE 8 — PREMIER TEST
@@ -166,7 +177,7 @@ Arrêter Marco :
 
 Relancer Marco :
 
-./marco start
+./lancer-marco.sh
 
 SI L'ÉCRAN RESTE NOIR OU SI MARCO NE DÉMARRE PAS
 -------------------------------------------------
@@ -189,8 +200,10 @@ MISE À JOUR PLUS TARD
 
 Dans le dossier source Marco Prime :
 
-git pull
-./marco rebuild
+./lancer-marco.sh
+
+Le lanceur réalise lui-même la mise à jour et la reconstruction lorsqu'elles
+sont possibles.
 
 
 RAPPEL DE SÉCURITÉ
