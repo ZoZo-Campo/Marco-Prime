@@ -69,14 +69,23 @@ function MemberCardLoaded({
     shopping.total.value,
     member.balance,
   );
+  const missingAmount = Math.max(
+    0,
+    Math.round((shopping.total.value - Number(member.balance)) * 100) / 100,
+  );
   return (
     <>
       <Alert>
         <AlertTitle>
           {member.firstName} {member.lastName}
         </AlertTitle>
-        <AlertDescription class={cn(notEnoughMoney && "text-destructive")}>
-          {member.balance}€
+        <AlertDescription class={cn("space-y-1", notEnoughMoney && "text-destructive")}>
+          <p>Solde : {member.balance}€</p>
+          {notEnoughMoney && (
+            <p class="font-semibold">
+              Paiement impossible — il manque {missingAmount.toFixed(2)}€.
+            </p>
+          )}
         </AlertDescription>
       </Alert>
     </>

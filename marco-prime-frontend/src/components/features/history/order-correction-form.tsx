@@ -305,8 +305,13 @@ function OrderCorrectionEditor({
               <p class="border-t pt-3 sm:col-span-2">
                 Solde actuel : <strong>{preview.currentBalance}</strong>
                 <span class="mx-2">→</span>
-                Futur solde : <strong>{preview.futureBalance}</strong>
+                Futur solde : <strong class={preview.insufficient ? "text-destructive" : ""}>{preview.futureBalance}</strong>
               </p>
+              {preview.insufficient && (
+                <p class="font-semibold text-destructive sm:col-span-2">
+                  Correction impossible : le solde deviendrait négatif.
+                </p>
+              )}
             </div>
           )}
           <label class="flex flex-col gap-2 sm:col-span-2">
@@ -338,7 +343,12 @@ function OrderCorrectionEditor({
 
       <div class="sticky bottom-0 z-10 -mx-1 mt-5 flex flex-wrap gap-3 border-t bg-card/95 px-1 py-4 backdrop-blur">
         <Button
-          disabled={saving || productsLoading || products.length === 0}
+          disabled={
+            saving ||
+            productsLoading ||
+            products.length === 0 ||
+            preview?.insufficient === true
+          }
           onClick={() => void submit(false)}
         >
           {saving ? <Loader2 class="animate-spin" /> : <RotateCcw />}
@@ -382,6 +392,8 @@ function correctionPreview(
     charged: `${(chargedCents / 100).toFixed(2)} €`,
     currentBalance: `${(currentBalanceCents / 100).toFixed(2)} €`,
     futureBalance: `${(futureBalanceCents / 100).toFixed(2)} €`,
+    insufficient:
+      futureBalanceCents < 0 && futureBalanceCents < currentBalanceCents,
   };
 }
 

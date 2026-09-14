@@ -172,6 +172,9 @@ export class OrderRepository {
         throw new Error("INVALID_MEMBER_BALANCE");
       }
       const newBalanceCents = currentBalanceCents - totalCents;
+      if (newBalanceCents < 0) {
+        throw new Error("INSUFFICIENT_BALANCE");
+      }
       const ledgerTotalCents = receiptItems.reduce(
         (total, item) => total - item.lineTotalCents,
         0,
@@ -376,6 +379,11 @@ export class OrderRepository {
       if (balanceCents === null) throw new Error("CORRECTION_INVALID_BALANCE");
       const balanceChangeCents = refundCents - replacementTotalCents;
       const newBalanceCents = balanceCents + balanceChangeCents;
+      // A correction must never worsen a negative balance. A refund is still
+      // allowed for an already-negative member because it repairs the balance.
+      if (newBalanceCents < 0 && newBalanceCents < balanceCents) {
+        throw new Error("CORRECTION_INSUFFICIENT_BALANCE");
+      }
       if (!Number.isSafeInteger(newBalanceCents) || Math.abs(newBalanceCents) > MAX_DATABASE_MONEY_CENTS) {
         throw new Error("CORRECTION_INVALID_BALANCE");
       }

@@ -129,6 +129,12 @@ client identifié par RFID.
 - `POST /api/v1/order-corrections` - Lister les ventes récentes corrigibles (administrateur)
 - `POST /api/v1/order-corrections/apply` - Annuler ou remplacer une vente (administrateur)
 
+Un achat est refusé avant toute écriture si son total dépasse le solde du
+membre. Le contrôle est refait dans la transaction MySQL après verrouillage du
+membre : deux Marco utilisées en même temps ne peuvent donc pas faire passer le
+solde sous zéro. Un paiement laissant exactement `0,00 €` reste autorisé. La
+même protection s’applique à une correction qui augmenterait le montant débité.
+
 Une correction conserve la vente d’origine pour l’audit. Dans une même
 transaction MySQL, Marco rembourse intégralement cette vente, crée
 éventuellement la ligne de remplacement et ajuste le solde une seule fois. Le

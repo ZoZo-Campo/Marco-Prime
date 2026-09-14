@@ -380,6 +380,7 @@ export const openApiSpec = {
         responses: {
           "201": { description: "Correction completed" },
           "400": { description: "Purchase cannot be corrected" },
+          "402": { description: "Correction would make the member balance negative" },
           "403": { description: "Administrator card required" },
           "409": { description: "Purchase already corrected or pending review" },
           "503": { description: "Result uncertain; manual review required" },
@@ -425,6 +426,9 @@ export const openApiSpec = {
           },
           "400": {
             description: "Bad request",
+          },
+          "402": {
+            description: "Insufficient member balance",
           },
           "404": {
             description: "Product or member not found",

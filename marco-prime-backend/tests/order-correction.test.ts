@@ -201,6 +201,67 @@ describe("Order correction endpoints", () => {
         .where(eq(members.id, memberId));
     }
   });
+
+  it("rejects a correction that would make the member balance negative", async () => {
+    const productId = productIds[0];
+    if (!productId) throw new Error("Product missing");
+    const originalBalance = await getBalanceByCardNumber(memberCardNumber);
+    let originalOrderId: number | null = null;
+
+    try {
+      await db
+        .update(members)
+        .set({ balance: "100.00" })
+        .where(eq(members.id, memberId));
+      const purchase = await client.api.v1.purchase.$post(
+        {
+          json: {
+            transactionId: crypto.randomUUID(),
+            cardNumber: memberCardNumber,
+            items: [{ productId, amount: 1 }],
+          },
+        },
+        authenticatedOptions,
+      );
+      expect(purchase.status).toBe(201);
+      const purchaseBody = await purchase.json();
+      originalOrderId = purchaseBody.transaction.orderIds[0]!;
+
+      await db
+        .update(members)
+        .set({ balance: "0.00" })
+        .where(eq(members.id, memberId));
+      const orderCountBefore = await getOrderCount();
+      const response = await client.api.v1["order-corrections"].apply.$post(
+        {
+          json: {
+            adminCardNumber,
+            originalOrderId,
+            replacementProductId: productId,
+            replacementAmount: 2,
+            reason: "Test du blocage du solde négatif",
+          },
+        },
+        authenticatedOptions,
+      );
+
+      expect(response.status).toBe(402);
+      expect(await response.json()).toMatchObject({
+        error: "Solde insuffisant pour appliquer cette correction",
+      });
+      expect(await getBalanceByCardNumber(memberCardNumber)).toBe("0.00");
+      expect(await getOrderCount()).toBe(orderCountBefore);
+      expect(await orderCorrectionService.findOriginal(originalOrderId)).toBeUndefined();
+    } finally {
+      if (originalOrderId !== null) {
+        await db.delete(orders).where(eq(orders.id, originalOrderId));
+      }
+      await db
+        .update(members)
+        .set({ balance: originalBalance })
+        .where(eq(members.id, memberId));
+    }
+  });
 });
 
 function toCents(value: string) {

@@ -126,8 +126,8 @@ export function MemberSearch() {
       </Button>
       {open && (
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3">
-          <Card class="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto p-5 shadow-2xl">
-            <div class="flex items-center justify-between gap-4">
+          <Card class="flex h-[calc(100dvh-1.5rem)] max-h-[52rem] w-full max-w-4xl flex-col overflow-hidden px-5 py-3 shadow-2xl">
+            <div class="flex shrink-0 items-center justify-between gap-4">
               <div>
                 <h2 class="text-2xl font-bold">Rechercher un membre</h2>
                 <p class="text-sm text-muted-foreground">
@@ -140,7 +140,7 @@ export function MemberSearch() {
             </div>
 
             {adminCardNumber === null ? (
-              <div class="my-8 flex flex-col items-center gap-4 text-center">
+              <div class="my-8 flex flex-1 flex-col items-center justify-center gap-4 text-center">
                 {authorizing ? (
                   <Loader2 class="size-14 animate-spin text-primary" />
                 ) : (
@@ -159,8 +159,8 @@ export function MemberSearch() {
                 )}
               </div>
             ) : (
-              <>
-                <div class="mt-5 flex items-center gap-3 rounded-lg border bg-background px-4">
+              <div class="mt-3 flex min-h-0 flex-1 flex-col gap-3">
+                <div class="flex shrink-0 items-center gap-3 rounded-lg border bg-background px-4">
                   <Search class="text-muted-foreground" />
                   <input
                     class="h-14 min-w-0 flex-1 bg-transparent text-xl outline-none"
@@ -174,11 +174,12 @@ export function MemberSearch() {
                   {searching && <Loader2 class="animate-spin text-primary" />}
                 </div>
 
-                <div class="my-4 overflow-x-auto rounded-lg border bg-background p-3">
-                  <OnScreenKeyboard value={query} onChange={setQuery} />
-                </div>
-
-                <div class="min-h-24 rounded-lg border">
+                <div class="min-h-16 flex-1 overflow-y-auto rounded-lg border bg-background">
+                  {error && (
+                    <p class="flex items-center gap-2 border-b p-4 text-destructive">
+                      <AlertTriangle /> {error}
+                    </p>
+                  )}
                   {query.trim().length < 2 ? (
                     <p class="p-6 text-center text-muted-foreground">
                       Saisissez au moins deux lettres.
@@ -206,12 +207,11 @@ export function MemberSearch() {
                     ))
                   )}
                 </div>
-                {error && (
-                  <p class="mt-3 flex items-center gap-2 text-destructive">
-                    <AlertTriangle /> {error}
-                  </p>
-                )}
-              </>
+
+                <div class="shrink-0 overflow-x-auto rounded-lg border bg-background p-2">
+                  <OnScreenKeyboard value={query} onChange={setQuery} />
+                </div>
+              </div>
             )}
           </Card>
         </div>
