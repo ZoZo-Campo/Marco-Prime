@@ -121,6 +121,14 @@ export function useRfid(options: UseRfidOptions = {}) {
     value,
     scanId,
     inputLength,
+    submit: (cardNumber: string) => {
+      clearBuffer();
+      const normalizedCardNumber = cardNumber.trim();
+      if (!/^\d{1,32}$/.test(normalizedCardNumber)) return false;
+      setValue(normalizedCardNumber);
+      setScanId((current) => current + 1);
+      return true;
+    },
     clear: () => {
       clearBuffer();
       setValue(undefined);

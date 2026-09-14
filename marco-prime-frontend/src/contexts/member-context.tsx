@@ -15,6 +15,7 @@ const MemberContext = createContext<{
   inputLength: number;
   paused: boolean;
   retry: () => Promise<void>;
+  submitCardNumber: (cardNumber: string) => boolean;
   clear: () => void;
   pause: () => void;
   resume: () => void;
@@ -40,6 +41,7 @@ export function MemberProvider({
     value: memberCardId,
     scanId,
     inputLength,
+    submit: submitRfid,
     clear: clearRfid,
   } = useRfid({ disabled: paused || disabled });
   const { data: fetchedMember, loading, error, refetch, reset } = useApi(
@@ -68,6 +70,11 @@ export function MemberProvider({
     clearRfid();
     reset();
   };
+  const submitCardNumber = (cardNumber: string) => {
+    setSelectedMember(null);
+    reset();
+    return submitRfid(cardNumber);
+  };
   const select = (member: MemberSchema) => {
     clearRfid();
     reset();
@@ -84,6 +91,7 @@ export function MemberProvider({
         inputLength,
         paused,
         retry: refetch,
+        submitCardNumber,
         clear,
         pause,
         resume,

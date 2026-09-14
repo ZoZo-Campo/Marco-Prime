@@ -27,6 +27,7 @@ import { Card } from "../components/ui/card";
 import { StatisticsPanel } from "../components/features/config/statistics-panel";
 import { WifiPanel } from "../components/features/config/wifi-panel";
 import { AccountingPanel } from "../components/features/config/accounting-panel";
+import { Keypad } from "../components/features/recharge/keypad";
 
 export const CONFIG_ROUTE_URL = "/config";
 
@@ -49,8 +50,10 @@ function ConfigContent() {
     error: memberError,
     inputLength,
     retry,
+    submitCardNumber,
     clear,
   } = useMember();
+  const [manualCardNumber, setManualCardNumber] = useState("");
   const isAdmin = member?.admin === true;
   const {
     data: catalog,
@@ -105,35 +108,71 @@ function ConfigContent() {
 
   if (!member) {
     return (
-      <CenteredCard>
-        {memberLoading ? (
-          <Loader2 class="size-14 animate-spin text-primary" />
-        ) : memberError ? (
-          <AlertCircle class="size-16 text-destructive" />
-        ) : (
-          <CreditCard class="size-16 text-primary" />
-        )}
-        <h1 class="text-3xl font-bold">Configuration des ventes</h1>
-        {memberError ? (
-          <>
-            <p class="max-w-xl text-center text-lg text-destructive">
-              Carte inconnue ou serveur indisponible.
+      <div class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-3">
+        <Card class="grid w-full max-w-4xl gap-4 p-4 md:grid-cols-[1fr_20rem]">
+          <div class="flex flex-col items-center justify-center gap-3 text-center">
+            {memberLoading ? (
+              <Loader2 class="size-12 animate-spin text-primary" />
+            ) : memberError ? (
+              <AlertCircle class="size-14 text-destructive" />
+            ) : (
+              <CreditCard class="size-14 text-primary" />
+            )}
+            <h1 class="text-2xl font-bold">Accès administrateur</h1>
+            <p class={cn("text-base", memberError ? "text-destructive" : "text-muted-foreground")}>
+              {memberError
+                ? "Carte inconnue ou serveur indisponible. Corrigez le numéro ou réessayez."
+                : inputLength > 0
+                  ? `Lecture RFID en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}.`
+                  : "Scannez la carte ou saisissez son numéro avec le pavé tactile."}
             </p>
-            <div class="flex gap-3">
-              <Button variant="outline" onClick={() => void retry()}>
-                Réessayer
+            {memberError && (
+              <Button variant="outline" onClick={() => void retry()} disabled={memberLoading}>
+                Réessayer la même carte
               </Button>
-              <Button onClick={clear}>Saisir une autre carte</Button>
+            )}
+          </div>
+
+          <form
+            class="flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitCardNumber(manualCardNumber);
+            }}
+          >
+            <div
+              class="flex min-h-12 items-center justify-center rounded-md border bg-background px-3 text-center text-2xl font-semibold tracking-wider"
+              aria-label="Numéro de carte saisi"
+            >
+              {manualCardNumber || "—"}
             </div>
-          </>
-        ) : (
-          <p class="max-w-xl text-center text-lg text-muted-foreground">
-            {inputLength > 0
-              ? `Saisie en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}. Appuyez sur Entrée.`
-              : "Scannez une carte administrateur, ou saisissez son numéro puis appuyez sur Entrée."}
-          </p>
-        )}
-      </CenteredCard>
+            <Keypad
+              value={manualCardNumber}
+              onChange={setManualCardNumber}
+              maxLength={32}
+              disabled={memberLoading}
+            />
+            <Button
+              type="submit"
+              size="lg"
+              disabled={memberLoading || !/^\d{5,32}$/.test(manualCardNumber)}
+            >
+              {memberLoading ? <Loader2 class="size-5 animate-spin" /> : <Check class="size-5" />}
+              Valider la carte
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setManualCardNumber("");
+                clear();
+              }}
+            >
+              Effacer et recommencer
+            </Button>
+          </form>
+        </Card>
+      </div>
     );
   }
 
