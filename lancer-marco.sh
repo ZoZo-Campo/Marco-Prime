@@ -35,6 +35,9 @@ if [[ -z "${HOST_PORT}" ]]; then
   exit 1
 fi
 
+KIOSK_SCALE="$(sed -n 's/^MARCO_KIOSK_SCALE=\([0-9][0-9]*\([.][0-9][0-9]*\)\{0,1\}\)$/\1/p' "${ENV_FILE}" | tail -n 1)"
+KIOSK_SCALE="${KIOSK_SCALE:-1.25}"
+
 APP_ORIGIN="http://127.0.0.1:${HOST_PORT}"
 APP_URL="${APP_ORIGIN}/"
 
@@ -125,6 +128,7 @@ launch_kiosk() {
     --disable-session-crashed-bubble \
     --disable-features=TranslateUI \
     --overscroll-history-navigation=0 \
+    --force-device-scale-factor="${KIOSK_SCALE}" \
     --ozone-platform-hint=auto \
     --user-data-dir="${XDG_CONFIG_HOME:-${HOME}/.config}/marco-prime-chromium" &
   local browser_pid=$!

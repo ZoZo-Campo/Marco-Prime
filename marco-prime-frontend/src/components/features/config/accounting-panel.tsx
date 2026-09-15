@@ -455,6 +455,22 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
           </Card>
         )}
 
+        <Card class="p-4">
+          <p class="mb-3 text-center text-lg font-semibold text-muted-foreground">
+            Calcul du résultat réel
+          </p>
+          <div class="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3 text-center">
+            <AccountingTotal label="Recettes" value={totals.revenue} />
+            <span class="text-4xl font-bold text-muted-foreground" aria-hidden="true">−</span>
+            <AccountingTotal label="Coût d’achat" value={totals.cost} />
+            <span class="text-4xl font-bold text-muted-foreground" aria-hidden="true">=</span>
+            <AccountingTotal label="Résultat" value={totals.result} result />
+          </div>
+          <p class="mt-3 text-center text-sm text-muted-foreground">
+            Coût d’achat = litres réellement écoulés × prix d’achat par litre.
+          </p>
+        </Card>
+
         <Card class="overflow-hidden p-0">
           <div class="flex flex-wrap items-center gap-3 border-b p-3">
             <label class="flex min-h-12 min-w-72 flex-1 items-center gap-2 border bg-background px-3">
@@ -588,6 +604,17 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+function AccountingTotal({ label, value, result = false }: { label: string; value: number; result?: boolean }) {
+  return (
+    <div class="min-w-0 rounded-lg border bg-muted/30 p-3">
+      <p class="text-base font-medium text-muted-foreground">{label}</p>
+      <p class={`mt-1 text-3xl font-bold ${result ? (value < 0 ? "text-destructive" : "text-green-400") : ""}`}>
+        {formatMoney(value)}
+      </p>
     </div>
   );
 }
