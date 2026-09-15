@@ -23,7 +23,9 @@ services:
       data-permissions:
         condition: service_completed_successfully
     init: true
-    restart: unless-stopped
+    # Relance le service s'il plante pendant une soirée, mais pas au démarrage
+    # de Debian : Marco est lancé volontairement depuis l'icône du Bureau.
+    restart: "on-failure:5"
     env_file:
       - .env.orange-pi
     environment:

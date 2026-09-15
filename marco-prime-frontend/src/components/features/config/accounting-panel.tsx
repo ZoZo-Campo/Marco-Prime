@@ -407,8 +407,9 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
   }
 
   return (
-    <div class="flex-1 overflow-y-auto p-5 pb-8">
-      <div class="mx-auto flex max-w-7xl flex-col gap-5">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div class="min-h-0 flex-1 overflow-y-auto p-5 pb-8">
+        <div class="mx-auto flex max-w-7xl flex-col gap-5">
         <header class="flex flex-wrap items-end gap-4">
           <div class="mr-auto">
             <h1 class="flex items-center gap-3 text-2xl font-bold"><Calculator /> Compta réelle</h1>
@@ -454,22 +455,6 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
             </p>
           </Card>
         )}
-
-        <Card class="p-4">
-          <p class="mb-3 text-center text-lg font-semibold text-muted-foreground">
-            Calcul du résultat réel
-          </p>
-          <div class="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3 text-center">
-            <AccountingTotal label="Recettes" value={totals.revenue} />
-            <span class="text-4xl font-bold text-muted-foreground" aria-hidden="true">−</span>
-            <AccountingTotal label="Coût d’achat" value={totals.cost} />
-            <span class="text-4xl font-bold text-muted-foreground" aria-hidden="true">=</span>
-            <AccountingTotal label="Résultat" value={totals.result} result />
-          </div>
-          <p class="mt-3 text-center text-sm text-muted-foreground">
-            Coût d’achat = litres réellement écoulés × prix d’achat par litre.
-          </p>
-        </Card>
 
         <Card class="overflow-hidden p-0">
           <div class="flex flex-wrap items-center gap-3 border-b p-3">
@@ -557,7 +542,11 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
           {rows.length === 0 && <p class="p-8 text-center text-muted-foreground">Ajoutez un produit ou préremplissez les ventes pour commencer.</p>}
         </Card>
 
-        <div class="sticky bottom-0 z-10 -mx-2 flex flex-wrap items-center gap-3 border-t bg-background/95 px-2 py-3 backdrop-blur">
+          {message && <p class="text-center text-lg">{message}</p>}
+        </div>
+      </div>
+
+      <div class="z-30 flex shrink-0 flex-wrap items-center gap-3 border-t bg-background px-5 py-3 shadow-[0_-8px_20px_rgba(0,0,0,0.35)]">
           {!isClosed && <Button variant="outline" onClick={addProduct}><Plus /> Ajouter un produit</Button>}
           <Button variant="outline" disabled={saving} onClick={() => void exportFullEvent()}><Download /> Export complet…</Button>
           <Button variant="outline" onClick={() => setDialog("new-event")}><RefreshCw /> Nouvelle soirée</Button>
@@ -571,8 +560,6 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
               </Button>
             </>
           )}
-        </div>
-        {message && <p class="text-center text-lg">{message}</p>}
       </div>
 
       {dialog === "new-event" && (
@@ -604,17 +591,6 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
           </div>
         </Modal>
       )}
-    </div>
-  );
-}
-
-function AccountingTotal({ label, value, result = false }: { label: string; value: number; result?: boolean }) {
-  return (
-    <div class="min-w-0 rounded-lg border bg-muted/30 p-3">
-      <p class="text-base font-medium text-muted-foreground">{label}</p>
-      <p class={`mt-1 text-3xl font-bold ${result ? (value < 0 ? "text-destructive" : "text-green-400") : ""}`}>
-        {formatMoney(value)}
-      </p>
     </div>
   );
 }

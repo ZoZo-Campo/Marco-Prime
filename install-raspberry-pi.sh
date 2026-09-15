@@ -133,7 +133,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable marco-prime.service
+systemctl disable marco-prime.service >/dev/null 2>&1 || true
 
 echo "Installation du lanceur Marco sur le Bureau…"
 chmod 0755 \
@@ -160,7 +160,7 @@ chown "${KIOSK_USER}:${KIOSK_GROUP}" "${DESKTOP_DIR}/Lancer Marco Prime.desktop"
 chmod 0755 "${DESKTOP_DIR}/Lancer Marco Prime.desktop"
 
 echo
-echo "Dépendances installées. Docker et l'API Marco démarreront automatiquement."
+echo "Dépendances installées. Marco ne démarrera que lorsque tu cliqueras sur son icône."
 echo "Redémarre la Raspberry pour activer l'accès Docker de ${KIOSK_USER}."
 echo "Après le redémarrage, double-clique sur 'Lancer Marco Prime' sur le Bureau."
 echo "Le lanceur tente la mise à jour Git, reconstruit Docker puis ouvre Home en plein écran."
