@@ -60,6 +60,17 @@ Avant l’installation, demander à la personne responsable :
 
 Ne jamais publier ces informations sur GitHub.
 
+Le compte MySQL dédié devrait disposer uniquement des droits nécessaires :
+
+- `SELECT` sur `members`, `products`, `product_types` et `orders` ;
+- `UPDATE` sur `members.balance` ;
+- `INSERT` dans `orders` ;
+- aucun droit `DROP`, `ALTER`, `CREATE`, `DELETE` ou de gestion des utilisateurs.
+
+Faire confirmer que la base possède notamment `members.card_number`,
+`members.balance`, `members.admin`, `products.available`,
+`products.product_type_id` et les colonnes attendues de `orders`.
+
 ## Installation sur Raspberry Pi 4
 
 ### 1. Préparer la Raspberry
@@ -320,10 +331,8 @@ d’abord l’historique et le solde du membre.
 - [`INSTALLATION_RASPBERRY_PI_4.txt`](INSTALLATION_RASPBERRY_PI_4.txt) : procédure
   Raspberry détaillée pas à pas ;
 - [`DEMARRAGE_LOCAL.md`](DEMARRAGE_LOCAL.md) : développement et tests sur Mac ;
-- [`ACCES_FOUAILLE_A_COMPLETER.md`](ACCES_FOUAILLE_A_COMPLETER.md) : informations
-  à demander à l’administration Fouaille ;
-- [`RECHERCHE_FOUAILLE_ET_INSTALLATION.md`](RECHERCHE_FOUAILLE_ET_INSTALLATION.md) :
-  architecture et décisions techniques.
+- [`marco-prime-backend/README.md`](marco-prime-backend/README.md) : API,
+  endpoints et architecture interne du backend.
 
 ## Licence et responsabilité
 
