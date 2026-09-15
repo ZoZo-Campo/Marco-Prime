@@ -8,6 +8,7 @@ RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp}/marco-prime-${UID}"
 BROWSER_PID_FILE="${RUNTIME_DIR}/chromium.pid"
 CONTROL_LOG="${RUNTIME_DIR}/kiosk-control.log"
 KIOSK_CONTROL_PID=""
+LAUNCH_LOCK_FILE="${RUNTIME_DIR}/launcher.lock"
 
 log() {
   printf '[Marco] %s\n' "$*"
@@ -21,6 +22,12 @@ cleanup() {
   rm -f "${BROWSER_PID_FILE}"
 }
 
+mkdir -p "${RUNTIME_DIR}"
+exec 9>"${LAUNCH_LOCK_FILE}"
+if ! flock -n 9; then
+  log "Marco est déjà en cours de lancement ou déjà ouvert."
+  exit 0
+fi
 trap cleanup EXIT INT TERM
 
 if [[ ! -f "${ENV_FILE}" ]]; then
@@ -115,7 +122,6 @@ launch_kiosk() {
     exit 1
   fi
 
-  mkdir -p "${RUNTIME_DIR}"
   rm -f "${BROWSER_PID_FILE}"
 
   log "Ouverture de Marco en plein écran…"

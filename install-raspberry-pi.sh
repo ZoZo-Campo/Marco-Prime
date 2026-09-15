@@ -106,7 +106,7 @@ systemctl daemon-reload
 systemctl enable --now NetworkManager.service
 systemctl enable --now marco-wifi.service
 
-echo "Activation du démarrage automatique de Docker et de l'API Marco..."
+echo "Préparation du service Marco (lancement manuel depuis le Bureau)..."
 KIOSK_GROUP="$(id -gn "${KIOSK_USER}")"
 cat > /etc/systemd/system/marco-prime.service <<EOF
 [Unit]

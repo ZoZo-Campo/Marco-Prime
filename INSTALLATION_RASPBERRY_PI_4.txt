@@ -95,9 +95,9 @@ chmod +x marco install-raspberry-pi.sh lancer-marco.sh
 
 sudo ./install-raspberry-pi.sh "$USER"
 
-Cette étape installe Docker, Docker Compose et Chromium. Elle active le
-redémarrage automatique de Docker et de l'API, puis crée sur le Bureau le
-raccourci « Lancer Marco Prime ».
+Cette étape installe Docker, Docker Compose et Chromium. Elle laisse le Bureau
+disponible au démarrage puis crée le raccourci « Lancer Marco Prime ». Marco et
+son API ne démarrent que lorsque ce raccourci est lancé.
 
 Lorsque l'installation est terminée, redémarrer pour activer l'accès à Docker :
 
@@ -145,7 +145,8 @@ l'API restent actifs.
 -----------------------
 
 1. Ouvrir Config.
-2. Scanner la carte administrateur, ou saisir son numéro puis appuyer sur Entrée.
+2. Scanner la carte administrateur, saisir son numéro puis appuyer sur Entrée,
+   ou utiliser le pavé numérique tactile et le bouton « Valider la carte ».
 3. Sélectionner deux produits de test.
 4. Appuyer sur Enregistrer.
 5. Revenir sur Home puis ouvrir Achats.

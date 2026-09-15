@@ -125,9 +125,9 @@ le service et MySQL.
 
 Sur Raspberry Pi OS 64 bits avec bureau, le script `install-raspberry-pi.sh`
 installe Chromium, Docker et les dépendances puis crée le raccourci
-**Lancer Marco Prime** sur le Bureau. Docker et l’API peuvent redémarrer avec la
-machine, mais Chromium ne masque jamais le Bureau tant que ce raccourci n’a pas
-été lancé.
+**Lancer Marco Prime** sur le Bureau. Le Bureau reste affiché après le démarrage
+de la machine ; Marco, son API et Chromium sont lancés volontairement depuis ce
+raccourci.
 
 Depuis la racine du projet copié sur le Raspberry :
 
