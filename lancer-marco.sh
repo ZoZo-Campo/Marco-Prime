@@ -43,7 +43,12 @@ if [[ -z "${HOST_PORT}" ]]; then
 fi
 
 KIOSK_SCALE="$(sed -n 's/^MARCO_KIOSK_SCALE=\([0-9][0-9]*\([.][0-9][0-9]*\)\{0,1\}\)$/\1/p' "${ENV_FILE}" | tail -n 1)"
-KIOSK_SCALE="${KIOSK_SCALE:-1.25}"
+# Les installations existantes avaient 1.25 dans leur .env. Ce défaut historique
+# rend l'interface minuscule sur le petit écran : la migration ne demande donc
+# aucune modification manuelle du fichier contenant les identifiants.
+if [[ -z "${KIOSK_SCALE}" || "${KIOSK_SCALE}" == "1.25" ]]; then
+  KIOSK_SCALE="1.75"
+fi
 
 APP_ORIGIN="http://127.0.0.1:${HOST_PORT}"
 APP_URL="${APP_ORIGIN}/"
@@ -65,6 +70,8 @@ update_code_if_possible() {
     return
   fi
 
+  local launcher_before launcher_after
+  launcher_before="$(git -C "${SCRIPT_DIR}" rev-parse HEAD:lancer-marco.sh 2>/dev/null || true)"
   log "Recherche d'une mise à jour GitHub…"
   if command -v timeout >/dev/null 2>&1; then
     if ! GIT_TERMINAL_PROMPT=0 timeout 30 git -C "${SCRIPT_DIR}" pull --ff-only origin main; then
@@ -72,6 +79,15 @@ update_code_if_possible() {
     fi
   elif ! GIT_TERMINAL_PROMPT=0 git -C "${SCRIPT_DIR}" pull --ff-only origin main; then
     log "GitHub inaccessible ou mise à jour impossible : conservation de la version locale."
+  fi
+
+  launcher_after="$(git -C "${SCRIPT_DIR}" rev-parse HEAD:lancer-marco.sh 2>/dev/null || true)"
+  if [[ -n "${launcher_before}" && "${launcher_before}" != "${launcher_after}" &&
+        "${MARCO_LAUNCHER_REEXEC:-}" != "1" ]]; then
+    log "Le lanceur a été mis à jour : application immédiate de la nouvelle version…"
+    trap - EXIT INT TERM
+    exec 9>&-
+    exec env MARCO_LAUNCHER_REEXEC=1 "${SCRIPT_DIR}/lancer-marco.sh"
   fi
 }
 
@@ -124,7 +140,7 @@ launch_kiosk() {
 
   rm -f "${BROWSER_PID_FILE}"
 
-  log "Ouverture de Marco en plein écran…"
+  log "Ouverture de Marco en plein écran (échelle ${KIOSK_SCALE})…"
   "${browser}" \
     --kiosk \
     --app="${APP_URL}" \

@@ -119,7 +119,7 @@ FOUAILLE_SYNC_INTERVAL_MS=300000
 MARCO_DATA_DIR=/app/data
 API_PORT=3000
 MARCO_HOST_PORT=3001
-MARCO_KIOSK_SCALE=1.25
+MARCO_KIOSK_SCALE=1.75
 NODE_ENV=production
 TZ=Europe/Paris
 FRONTEND_URL=http://127.0.0.1:3001
@@ -299,13 +299,21 @@ qui sélectionne automatiquement la commande compatible.
 
 ### L’interface est trop petite sur l’écran Raspberry
 
-Modifier dans `.env.orange-pi` :
+Le lanceur utilise maintenant l'échelle `1.75` automatiquement, y compris
+si un ancien `.env.orange-pi` contient la valeur historique `1.25`.
+Aucune modification du fichier de configuration n'est nécessaire.
+
+Si cette échelle ne convient pas à votre écran, vous pouvez néanmoins la
+personnaliser dans `.env.orange-pi` :
 
 ```env
-MARCO_KIOSK_SCALE=1.35
+MARCO_KIOSK_SCALE=1.75
 ```
 
-Fermer puis relancer le kiosque. `1.0` correspond à la taille normale.
+Fermer puis relancer le kiosque. Le lanceur utilise un profil Chromium séparé :
+le zoom réglé dans Chromium ouvert manuellement ne s'applique pas à Marco.
+Si `1.75` est trop grand sur votre écran, essayer `1.5` ; s'il reste trop
+petit, essayer `2.0`. Aucun rebuild Docker n'est nécessaire pour ce réglage.
 
 ### La base ou Fouaille apparaît en rouge
 
