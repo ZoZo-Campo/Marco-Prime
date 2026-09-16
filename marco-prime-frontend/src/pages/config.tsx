@@ -6,10 +6,13 @@ import {
   Check,
   CreditCard,
   Loader2,
+  Package,
   Power,
   Save,
+  Search,
   ShieldAlert,
   ShoppingBasket,
+  UsersRound,
   Wifi,
   X,
 } from "lucide-preact";
@@ -27,12 +30,15 @@ import { Card } from "../components/ui/card";
 import { StatisticsPanel } from "../components/features/config/statistics-panel";
 import { WifiPanel } from "../components/features/config/wifi-panel";
 import { AccountingPanel } from "../components/features/config/accounting-panel";
+import { MembersPanel } from "../components/features/config/members-panel";
+import { FouailleProductsPanel } from "../components/features/config/fouaille-products-panel";
 import { Keypad } from "../components/features/recharge/keypad";
+import { OnScreenKeyboard } from "../components/shared/on-screen-keyboard";
 
 export const CONFIG_ROUTE_URL = "/config";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-type AdminSection = "catalog" | "statistics" | "accounting" | "wifi";
+type AdminSection = "catalog" | "statistics" | "accounting" | "wifi" | "members" | "fouaille-products";
 const KIOSK_CONTROL_URL = "http://127.0.0.1:3210";
 
 export function ConfigPage() {
@@ -52,9 +58,13 @@ function ConfigContent() {
     retry,
     submitCardNumber,
     clear,
+    pause,
   } = useMember();
   const [manualCardNumber, setManualCardNumber] = useState("");
   const isAdmin = member?.admin === true;
+  useEffect(() => {
+    if (isAdmin) pause();
+  }, [isAdmin]);
   const {
     data: catalog,
     loading: catalogLoading,
@@ -64,6 +74,8 @@ function ConfigContent() {
     immediate: isAdmin,
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogKeyboard, setCatalogKeyboard] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [section, setSection] = useState<AdminSection>("catalog");
@@ -105,6 +117,15 @@ function ConfigContent() {
   }, [catalog]);
 
   const categories = useMemo(() => groupByCategory(catalog ?? []), [catalog]);
+  const filteredCategories = useMemo(() => {
+    const needle = catalogQuery.trim().toLocaleLowerCase("fr");
+    if (!needle) return categories;
+    return categories.map((category) => ({
+      ...category,
+      products: category.products.filter((product) =>
+        `${product.name} ${product.title}`.toLocaleLowerCase("fr").includes(needle)),
+    })).filter((category) => category.products.length > 0);
+  }, [categories, catalogQuery]);
 
   if (!member) {
     return (
@@ -201,13 +222,25 @@ function ConfigContent() {
   };
 
   const selectAll = () => {
-    setSelectedIds(new Set((catalog ?? []).map((product) => product.id)));
+    if (catalogQuery.trim()) {
+      setSelectedIds((current) => new Set([
+        ...current,
+        ...filteredCategories.flatMap((category) => category.products.map((product) => product.id)),
+      ]));
+    } else {
+      setSelectedIds(new Set((catalog ?? []).map((product) => product.id)));
+    }
     setDirty(true);
     setSaveState("idle");
   };
 
   const clearSelection = () => {
-    setSelectedIds(new Set());
+    if (catalogQuery.trim()) {
+      const visibleIds = new Set(filteredCategories.flatMap((category) => category.products.map((product) => product.id)));
+      setSelectedIds((current) => new Set([...current].filter((id) => !visibleIds.has(id))));
+    } else {
+      setSelectedIds(new Set());
+    }
     setDirty(true);
     setSaveState("idle");
   };
@@ -260,6 +293,9 @@ function ConfigContent() {
         >
           <ShoppingBasket class="size-5" /> Catalogue
         </Button>
+        <Button variant={section === "fouaille-products" ? "default" : "outline"} onClick={() => setSection("fouaille-products")}>
+          <Package class="size-5" /> Produits Fouaille
+        </Button>
         <Button
           variant={section === "statistics" ? "default" : "outline"}
           onClick={() => setSection("statistics")}
@@ -271,6 +307,9 @@ function ConfigContent() {
           onClick={() => setSection("accounting")}
         >
           <Calculator class="size-5" /> Compta
+        </Button>
+        <Button variant={section === "members" ? "default" : "outline"} onClick={() => setSection("members")}>
+          <UsersRound class="size-5" /> Membres
         </Button>
         <Button
           variant={section === "wifi" ? "default" : "outline"}
@@ -362,6 +401,20 @@ function ConfigContent() {
     );
   }
 
+  if (section === "members") {
+    return <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+      {adminNavigation}
+      <MembersPanel adminCardNumber={member.cardNumber} />
+    </div>;
+  }
+
+  if (section === "fouaille-products") {
+    return <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+      {adminNavigation}
+      <FouailleProductsPanel adminCardNumber={member.cardNumber} onChanged={() => void refetch()} />
+    </div>;
+  }
+
   if (section === "wifi") {
     return (
       <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
@@ -394,10 +447,10 @@ function ConfigContent() {
         </div>
         <div class="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={selectAll}>
-            Tout cocher
+            {catalogQuery.trim() ? "Cocher les résultats" : "Tout cocher"}
           </Button>
           <Button variant="ghost" size="sm" onClick={clearSelection}>
-            Tout décocher
+            {catalogQuery.trim() ? "Décocher les résultats" : "Tout décocher"}
           </Button>
           <Button
             onClick={saveSelection}
@@ -414,6 +467,17 @@ function ConfigContent() {
       </header>
 
       <div class="flex-1 overflow-y-auto px-7 py-5">
+        <div class="mb-5 flex items-center gap-3 rounded border bg-background px-3">
+          <Search class="size-5 text-muted-foreground" />
+          <input class="min-h-12 min-w-0 flex-1 bg-transparent text-lg outline-none" value={catalogQuery}
+            placeholder="Chercher un produit à vendre ce soir" onInput={(event) => setCatalogQuery(event.currentTarget.value)} />
+          <Button variant="ghost" size="sm" onClick={() => setCatalogKeyboard(!catalogKeyboard)}>
+            {catalogKeyboard ? "Masquer clavier" : "Clavier tactile"}
+          </Button>
+        </div>
+        {catalogKeyboard && <div class="mb-5 overflow-x-auto rounded border bg-background p-2">
+          <OnScreenKeyboard value={catalogQuery} onChange={setCatalogQuery} />
+        </div>}
         {catalogLoading && (
           <div class="flex h-full items-center justify-center">
             <Loader2 class="size-12 animate-spin text-primary" />
@@ -437,8 +501,12 @@ function ConfigContent() {
           </CenteredCard>
         )}
 
+        {!catalogLoading && !catalogError && catalogQuery.trim() && filteredCategories.length === 0 && (
+          <p class="py-8 text-center text-muted-foreground">Aucun produit ne correspond à cette recherche.</p>
+        )}
+
         <div class="flex flex-col gap-7">
-          {categories.map((category) => (
+          {filteredCategories.map((category) => (
             <section key={category.id}>
               <h2 class="mb-3 text-lg font-semibold">{category.name}</h2>
               <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">

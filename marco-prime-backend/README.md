@@ -109,7 +109,11 @@ Une documentation Swagger UI interactive est disponible une fois le serveur dém
 
 ### Membres
 - `GET /api/v1/member/:card_number` - Récupérer un membre par numéro de carte
-- `POST /api/v1/members/search` - Rechercher un membre par nom (carte administrateur requise)
+- `POST /api/v1/members/search` - Rechercher un membre par nom et/ou promotion (carte administrateur requise)
+- `POST /api/v1/admin/promotions` - Lister les promotions (administrateur)
+- `POST /api/v1/admin/members/search` - Rechercher les membres, avec ou sans badge (administrateur)
+- `POST /api/v1/admin/members` - Créer un membre Fouaille avec solde initial nul (administrateur)
+- `PUT /api/v1/admin/members/badge` - Attribuer ou remplacer son badge sans toucher au solde ni à l’historique (administrateur)
 
 Dans les écrans d’achat et de rechargement, **Rechercher sans carte** ouvre un
 clavier tactile AZERTY intégré. Une carte administrateur doit d’abord autoriser
@@ -122,6 +126,15 @@ client identifié par RFID.
 - `GET /api/v1/products/:product_type_id` - Lister les produits disponibles d'une catégorie (paginé)
 - `GET /api/v1/catalog-selection` - Lister le catalogue Fouaille et la sélection locale Marco
 - `PUT /api/v1/catalog-selection` - Remplacer la sélection locale (carte administrateur requise)
+- `POST /api/v1/admin/product-types` - Lister toutes les catégories Fouaille (administrateur)
+- `POST /api/v1/admin/products` - Créer un produit indisponible par défaut (administrateur)
+- `PUT /api/v1/admin/products/availability` - Modifier la disponibilité globale Fouaille (administrateur)
+
+La disponibilité Fouaille est partagée entre les caisses. La sélection des
+produits vendus ce soir est propre à la Marco. Les mutations de produits sont
+refusées si `FOUAILLE_SYNC_ENABLED=true`, car la synchronisation écraserait
+ces changements. Ces actions nécessitent des droits MySQL `INSERT` sur
+`members`/`products` et `UPDATE` sur `members.card_number`/`products.available`.
 
 ### Commandes
 - `GET /api/v1/history` - Historique paginé, filtrable par nom, produit, date ou numéro de transaction

@@ -25,6 +25,8 @@ export function MemberSearch() {
   const [open, setOpen] = useState(false);
   const [adminCardNumber, setAdminCardNumber] = useState<number | null>(null);
   const [query, setQuery] = useState("");
+  const [promotion, setPromotion] = useState("");
+  const [promotions, setPromotions] = useState<number[]>([]);
   const [results, setResults] = useState<MemberSchema[]>([]);
   const [authorizing, setAuthorizing] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -40,6 +42,7 @@ export function MemberSearch() {
     setOpen(true);
     setAdminCardNumber(null);
     setQuery("");
+    setPromotion("");
     setResults([]);
     setError(null);
     clearAdminScan();
@@ -78,8 +81,23 @@ export function MemberSearch() {
   }, [scannedAdminCard, open, adminCardNumber]);
 
   useEffect(() => {
+    if (!adminCardNumber) return;
+    const controller = new AbortController();
+    fetch(apiUrl("admin/promotions"), {
+      method: "POST",
+      headers: apiHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ adminCardNumber }),
+      signal: controller.signal,
+    }).then((response) => response.json())
+      .then((rows: { promotion: number }[]) => {
+        if (Array.isArray(rows)) setPromotions(rows.map((row) => row.promotion));
+      }).catch(() => {});
+    return () => controller.abort();
+  }, [adminCardNumber]);
+
+  useEffect(() => {
     const trimmed = query.trim();
-    if (!adminCardNumber || trimmed.length < 2) {
+    if (!adminCardNumber || (trimmed.length < 2 && !promotion)) {
       setResults([]);
       setSearching(false);
       return;
@@ -92,7 +110,7 @@ export function MemberSearch() {
       fetch(apiUrl("members/search"), {
         method: "POST",
         headers: apiHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ adminCardNumber, query: trimmed }),
+        body: JSON.stringify({ adminCardNumber, query: trimmed, ...(promotion ? { promotion: Number(promotion) } : {}) }),
         signal: controller.signal,
       })
         .then(async (response) => {
@@ -111,7 +129,7 @@ export function MemberSearch() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [adminCardNumber, query]);
+  }, [adminCardNumber, query, promotion]);
 
   const choose = (member: MemberSchema) => {
     select(member);
@@ -173,6 +191,14 @@ export function MemberSearch() {
                   />
                   {searching && <Loader2 class="animate-spin text-primary" />}
                 </div>
+                <label class="flex shrink-0 items-center gap-3 text-lg">
+                  Promotion
+                  <select class="min-h-12 flex-1 rounded-lg border bg-background px-3" value={promotion}
+                    onChange={(event) => setPromotion(event.currentTarget.value)}>
+                    <option value="">Toutes les promotions</option>
+                    {promotions.map((year) => <option key={year} value={year}>{year}</option>)}
+                  </select>
+                </label>
 
                 <div class="min-h-16 flex-1 overflow-y-auto rounded-lg border bg-background">
                   {error && (
@@ -180,9 +206,9 @@ export function MemberSearch() {
                       <AlertTriangle /> {error}
                     </p>
                   )}
-                  {query.trim().length < 2 ? (
+                  {query.trim().length < 2 && !promotion ? (
                     <p class="p-6 text-center text-muted-foreground">
-                      Saisissez au moins deux lettres.
+                      Saisissez au moins deux lettres ou choisissez une promotion.
                     </p>
                   ) : !searching && results.length === 0 && !error ? (
                     <p class="p-6 text-center text-muted-foreground">
@@ -200,7 +226,7 @@ export function MemberSearch() {
                           {member.firstName} {member.lastName}
                         </span>
                         <span class="ml-auto text-muted-foreground">
-                          Solde {member.balance} €
+                          {member.class ? `Promo ${member.class} · ` : ""}Solde {member.balance} €
                         </span>
                         <Check class="text-primary" />
                       </button>

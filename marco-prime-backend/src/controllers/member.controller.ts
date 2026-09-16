@@ -25,7 +25,7 @@ export class MemberController {
   }
 
   async searchMembers(c: Context) {
-    const { adminCardNumber, query } = c.req.valid(
+    const { adminCardNumber, query, promotion } = c.req.valid(
       "json" as never,
     ) as MemberSearchRequest;
     const admin = await this.memberRepository.findFullByCardNumber(
@@ -37,6 +37,6 @@ export class MemberController {
       });
     }
 
-    return c.json(await this.memberRepository.search(query));
+    return c.json(await this.memberRepository.search(query, 20, promotion));
   }
 }

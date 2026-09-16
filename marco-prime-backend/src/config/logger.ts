@@ -17,7 +17,11 @@ export function auditEvent(
     | "purchase.completed"
     | "recharge.completed"
     | "purchase.corrected"
-    | "accounting.updated",
+    | "accounting.updated"
+    | "member.created"
+    | "member.badge.changed"
+    | "product.created"
+    | "product.availability.changed",
   details: Record<string, unknown>,
 ) {
   if (process.env.NODE_ENV === "test") return;

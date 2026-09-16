@@ -9,6 +9,7 @@ export const memberSchema = z.object({
   cardNumber: z.coerce.number().int().positive().safe(),
   balance: moneyStringSchema,
   admin: z.coerce.boolean(),
+  class: z.number().nullable().optional(),
 });
 
 export const memberListSchema = z.array(memberSchema);

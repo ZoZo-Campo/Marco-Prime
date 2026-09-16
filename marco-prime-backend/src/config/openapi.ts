@@ -109,7 +109,7 @@ export const openApiSpec = {
     },
     "/api/v1/members/search": {
       post: {
-        summary: "Search members by name",
+        summary: "Search members by name and/or promotion",
         description:
           "Administrator-only member lookup used when a customer has no RFID card",
         tags: ["Members"],
@@ -118,6 +118,65 @@ export const openApiSpec = {
           "200": { description: "Matching card-enabled members" },
           "403": { description: "Administrator card required" },
         },
+      },
+    },
+    "/api/v1/admin/promotions": {
+      post: {
+        summary: "List member promotions",
+        description: "Administrator card required in JSON body",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Promotions and member counts" }, "403": { description: "Administrator card required" } },
+      },
+    },
+    "/api/v1/admin/members/search": {
+      post: {
+        summary: "Find members, including those without a badge",
+        description: "Filter by name and/or promotion; administrator card required",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Matching members" }, "403": { description: "Administrator card required" } },
+      },
+    },
+    "/api/v1/admin/members": {
+      post: {
+        summary: "Create a Fouaille member with zero balance",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: { "201": { description: "Member created" }, "409": { description: "Duplicate email or badge" } },
+      },
+    },
+    "/api/v1/admin/members/badge": {
+      put: {
+        summary: "Assign or replace a member badge",
+        description: "Keeps the same account, balance and order history",
+        tags: ["Members"],
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Badge changed" }, "409": { description: "Badge conflict or stale record" } },
+      },
+    },
+    "/api/v1/admin/product-types": {
+      post: {
+        summary: "List all Fouaille product categories",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Product categories" } },
+      },
+    },
+    "/api/v1/admin/products": {
+      post: {
+        summary: "Create a Fouaille product, unavailable by default",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        responses: { "201": { description: "Product created" }, "409": { description: "Duplicate product" } },
+      },
+    },
+    "/api/v1/admin/products/availability": {
+      put: {
+        summary: "Change global Fouaille product availability",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Availability changed" }, "409": { description: "Concurrent change or automatic synchronization active" } },
       },
     },
     "/api/v1/products": {

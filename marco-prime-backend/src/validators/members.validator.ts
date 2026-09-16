@@ -28,5 +28,8 @@ export const cardNumberParamSchema = z.object({
 
 export const memberSearchSchema = z.object({
   adminCardNumber: z.number().int().positive().safe(),
-  query: z.string().trim().min(2).max(80),
+  query: z.string().trim().max(80),
+  promotion: z.number().int().min(2000).max(2100).optional(),
+}).refine(({ query, promotion }) => query.length >= 2 || promotion !== undefined, {
+  message: "Saisir deux lettres ou choisir une promotion",
 });

@@ -17,6 +17,8 @@ lecteur RFID USB reconnu comme clavier.
 - protection contre le double-clic et nouvelle tentative avec le même identifiant ;
 - rechargement validé par une carte administrateur ;
 - sélection des produits vendus pendant la soirée ;
+- recherche de membres par promotion, création de membres et attribution/remplacement de badges (administrateur) ;
+- recherche, création et activation/désactivation des produits Fouaille (administrateur) ;
 - historique avec recherche, ancien solde et nouveau solde ;
 - correction ou annulation administrateur d’une vente ;
 - statistiques et comptabilité basée sur les litres réellement mesurés ;
@@ -66,6 +68,15 @@ Le compte MySQL dédié devrait disposer uniquement des droits nécessaires :
 - `UPDATE` sur `members.balance` ;
 - `INSERT` dans `orders` ;
 - aucun droit `DROP`, `ALTER`, `CREATE`, `DELETE` ou de gestion des utilisateurs.
+
+Les fonctions de gestion Fouaille dans **Config** demandent en plus `INSERT` sur
+`members` et `products`, ainsi que `UPDATE` sur `members.card_number` et
+`products.available`. Elles modifient la base partagée par toutes les Marco ;
+la sélection « vendu ce soir » reste un réglage local. Si ces droits ne sont pas
+accordés par l’école, les paiements continuent de fonctionner mais ces actions
+administratives échouent. Avec `FOUAILLE_SYNC_ENABLED=true`, la création et la
+disponibilité des produits depuis Marco sont bloquées : la synchronisation
+écraserait autrement ces modifications.
 
 Faire confirmer que la base possède notamment `members.card_number`,
 `members.balance`, `members.admin`, `products.available`,

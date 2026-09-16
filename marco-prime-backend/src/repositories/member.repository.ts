@@ -30,7 +30,7 @@ export class MemberRepository {
     return member;
   }
 
-  async search(query: string, limit = 12) {
+  async search(query: string, limit = 12, promotion?: number) {
     const pattern = `%${query.trim()}%`;
     return await db
       .select({
@@ -40,12 +40,14 @@ export class MemberRepository {
         cardNumber: members.cardNumber,
         balance: members.balance,
         admin: members.admin,
+        class: members.class,
       })
       .from(members)
       .where(
         and(
           isNotNull(members.cardNumber),
-          or(
+          promotion === undefined ? undefined : eq(members.class, promotion),
+          query.trim().length < 2 ? undefined : or(
           like(members.firstName, pattern),
           like(members.lastName, pattern),
           sql`concat(${members.firstName}, ' ', ${members.lastName}) like ${pattern}`,

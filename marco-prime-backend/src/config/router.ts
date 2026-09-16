@@ -10,6 +10,7 @@ import { SystemController } from "../controllers/system.controller.js";
 import { WifiController } from "../controllers/wifi.controller.js";
 import { AccountingController } from "../controllers/accounting.controller.js";
 import { OrderCorrectionController } from "../controllers/order-correction.controller.js";
+import { AdminManagementController } from "../controllers/admin-management.controller.js";
 import { cardNumberParamSchema, memberSearchSchema } from "../validators/members.validator.js";
 import { historyQuerySchema } from "../validators/orders.validator.js";
 import {
@@ -27,6 +28,14 @@ import {
 import { wifiAdminSchema, wifiConnectSchema } from "../validators/wifi.validator.js";
 import { accountingExportSchema, accountingReadSchema, accountingUpdateSchema } from "../validators/accounting.validator.js";
 import { correctionListSchema, correctionRequestSchema } from "../validators/order-correction.validator.js";
+import {
+  adminBadgeSchema,
+  adminMemberCreateSchema,
+  adminMemberSearchSchema,
+  adminProductAvailabilitySchema,
+  adminProductCreateSchema,
+  adminReadSchema,
+} from "../validators/admin-management.validator.js";
 
 const memberController = new MemberController();
 const productController = new ProductController();
@@ -38,6 +47,7 @@ const systemController = new SystemController();
 const wifiController = new WifiController();
 const accountingController = new AccountingController();
 const correctionController = new OrderCorrectionController();
+const adminManagement = new AdminManagementController();
 
 const router = new Hono()
   .get("/system/status", (c) => systemController.getStatus(c))
@@ -57,6 +67,27 @@ const router = new Hono()
   )
   .post("/members/search", zValidator("json", memberSearchSchema), (c) =>
     memberController.searchMembers(c),
+  )
+  .post("/admin/promotions", zValidator("json", adminReadSchema), (c) =>
+    adminManagement.promotions(c),
+  )
+  .post("/admin/members/search", zValidator("json", adminMemberSearchSchema), (c) =>
+    adminManagement.searchMembers(c),
+  )
+  .post("/admin/members", zValidator("json", adminMemberCreateSchema), (c) =>
+    adminManagement.createMember(c),
+  )
+  .put("/admin/members/badge", zValidator("json", adminBadgeSchema), (c) =>
+    adminManagement.replaceBadge(c),
+  )
+  .post("/admin/product-types", zValidator("json", adminReadSchema), (c) =>
+    adminManagement.productTypes(c),
+  )
+  .post("/admin/products", zValidator("json", adminProductCreateSchema), (c) =>
+    adminManagement.createProduct(c),
+  )
+  .put("/admin/products/availability", zValidator("json", adminProductAvailabilitySchema), (c) =>
+    adminManagement.setAvailability(c),
   )
   .get("/products", (c) => productController.getAllProducts(c))
   .get("/catalog-selection", (c) => productController.getCatalogSelection(c))

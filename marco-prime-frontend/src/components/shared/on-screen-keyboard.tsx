@@ -1,4 +1,5 @@
 import { Delete, Space } from "lucide-preact";
+import { useState } from "preact/hooks";
 import { Button } from "../ui/button";
 
 const LETTER_ROWS = ["AZERTYUIOP", "QSDFGHJKLM", "WXCVBN"];
@@ -9,6 +10,7 @@ interface OnScreenKeyboardProps {
 }
 
 export function OnScreenKeyboard({ value, onChange }: OnScreenKeyboardProps) {
+  const [uppercase, setUppercase] = useState(false);
   return (
     <div class="flex flex-col gap-2" aria-label="Clavier tactile AZERTY">
       {LETTER_ROWS.map((row) => (
@@ -19,13 +21,28 @@ export function OnScreenKeyboard({ value, onChange }: OnScreenKeyboardProps) {
               key={letter}
               type="button"
               variant="outline"
-              onClick={() => onChange(`${value}${letter}`)}
+              onClick={() => onChange(`${value}${uppercase ? letter : letter.toLowerCase()}`)}
             >
-              {letter}
+              {uppercase ? letter : letter.toLowerCase()}
             </Button>
           ))}
         </div>
       ))}
+      <div class="flex justify-center gap-2">
+        <Button class="h-10" type="button" variant="outline" onClick={() => setUppercase(!uppercase)}>
+          {uppercase ? "minuscules" : "MAJ"}
+        </Button>
+        {["é", "è", "ê", "à", "ç", "ù", "ô"].map((character) => (
+          <Button class="h-10 min-w-9 px-2" key={character} type="button" variant="outline"
+            onClick={() => onChange(`${value}${uppercase ? character.toUpperCase() : character}`)}>{uppercase ? character.toUpperCase() : character}</Button>
+        ))}
+      </div>
+      <div class="flex justify-center gap-2">
+        {["@", ".", "-", "_", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map((character) => (
+          <Button class="h-10 min-w-9 px-2" key={character} type="button" variant="outline"
+            onClick={() => onChange(`${value}${character}`)}>{character}</Button>
+        ))}
+      </div>
       <div class="flex justify-center gap-2">
         <Button
           class="h-11 min-w-48"
