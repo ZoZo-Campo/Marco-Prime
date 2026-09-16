@@ -39,6 +39,6 @@ export function productColors(value: string): {
   return {
     swatch,
     border,
-    surface: `${swatch}2b`,
+    surface: `${swatch}20`,
   };
 }
