@@ -1,6 +1,7 @@
 import { and, asc, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import { db } from "../config/database.js";
 import { members } from "../db/schema.js";
+import { isBirthdayToday } from "../utils/birthday.js";
 
 export class MemberRepository {
   async findByCardNumber(cardNumber: number) {
@@ -12,12 +13,15 @@ export class MemberRepository {
         cardNumber: members.cardNumber,
         balance: members.balance,
         admin: members.admin,
+        birthMonthDay: sql<string | null>`DATE_FORMAT(${members.birthDate}, '%m-%d')`,
       })
       .from(members)
       .where(eq(members.cardNumber, cardNumber))
       .limit(1);
 
-    return member;
+    if (!member) return undefined;
+    const { birthMonthDay, ...publicMember } = member;
+    return { ...publicMember, isBirthday: isBirthdayToday(birthMonthDay) };
   }
 
   async findFullByCardNumber(cardNumber: number) {
@@ -32,7 +36,7 @@ export class MemberRepository {
 
   async search(query: string, limit = 12, promotion?: number) {
     const pattern = `%${query.trim()}%`;
-    return await db
+    const found = await db
       .select({
         id: members.id,
         lastName: members.lastName,
@@ -41,6 +45,7 @@ export class MemberRepository {
         balance: members.balance,
         admin: members.admin,
         class: members.class,
+        birthMonthDay: sql<string | null>`DATE_FORMAT(${members.birthDate}, '%m-%d')`,
       })
       .from(members)
       .where(
@@ -57,6 +62,10 @@ export class MemberRepository {
       )
       .orderBy(asc(members.lastName), asc(members.firstName))
       .limit(limit);
+    return found.map(({ birthMonthDay, ...member }) => ({
+      ...member,
+      isBirthday: isBirthdayToday(birthMonthDay),
+    }));
   }
 
 }

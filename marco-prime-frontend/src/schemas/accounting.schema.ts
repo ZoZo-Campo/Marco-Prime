@@ -57,6 +57,7 @@ const exportedRechargeSchema = z.object({
   memberLastName: z.string().nullable(),
   amount: moneyStringSchema,
   date: z.string().datetime(),
+  paymentMethod: z.enum(["card", "cash"]).nullable(),
 });
 
 const exportedCorrectionSchema = z.object({

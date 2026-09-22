@@ -76,6 +76,8 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
   const [status, setStatus] = useState<AccountingStatus>("draft");
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [rechargeExportFrom, setRechargeExportFrom] = useState(todayLocal());
+  const [rechargeExportTo, setRechargeExportTo] = useState(todayLocal());
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [productSearch, setProductSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -386,6 +388,33 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
     }
   };
 
+  const exportRecharges = async () => {
+    if (!rechargeExportFrom || !rechargeExportTo || rechargeExportFrom > rechargeExportTo) {
+      setMessage("Choisissez une période valide pour les rechargements.");
+      return;
+    }
+    try {
+      const from = new Date(`${rechargeExportFrom}T00:00:00`).toISOString();
+      const toDate = new Date(`${rechargeExportTo}T00:00:00`);
+      toDate.setDate(toDate.getDate() + 1);
+      const response = await fetch(apiUrl("accounting/export"), {
+        method: "POST",
+        headers: apiHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ adminCardNumber, from, to: toDate.toISOString() }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const exported = accountingExportSchema.parse(await response.json());
+      const csv = tableCsv(
+        ["Transaction", "Date", "Membre", "Montant", "Paiement reçu"],
+        exported.recharges.map((recharge) => [recharge.orderId, formatCsvDate(recharge.date), memberName(recharge), csvNumber(Number(recharge.amount), 2), recharge.paymentMethod === "card" ? "Carte bancaire" : recharge.paymentMethod === "cash" ? "Espèces" : "Non renseigné"]),
+      );
+      downloadBlob(`rechargements-${rechargeExportFrom}-${rechargeExportTo}.csv`, csvFile("rechargements.csv", csv).blob);
+      setMessage(`${exported.recharges.length} rechargement(s) exporté(s).`);
+    } catch (error) {
+      setMessage(`Export des rechargements impossible : ${error instanceof Error ? error.message : "erreur inconnue"}`);
+    }
+  };
+
   const closeEvent = async () => {
     if (!canClose(rows) || lastExportSignature !== draftSignature) return;
     const nextDraft = { ...draft, status: "closed" as const };
@@ -542,6 +571,16 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
           {rows.length === 0 && <p class="p-8 text-center text-muted-foreground">Ajoutez un produit ou préremplissez les ventes pour commencer.</p>}
         </Card>
 
+          <Card class="flex flex-wrap items-end gap-3 p-4">
+            <label class="flex flex-col gap-1 text-sm">Rechargements du
+              <input type="date" class="border bg-input px-3 py-2 text-base" value={rechargeExportFrom} onInput={(event) => setRechargeExportFrom(event.currentTarget.value)} />
+            </label>
+            <label class="flex flex-col gap-1 text-sm">Au (inclus)
+              <input type="date" class="border bg-input px-3 py-2 text-base" value={rechargeExportTo} onInput={(event) => setRechargeExportTo(event.currentTarget.value)} />
+            </label>
+            <Button variant="outline" onClick={() => void exportRecharges()}><Download /> Exporter rechargements CSV</Button>
+            <p class="w-full text-xs text-muted-foreground">Les modes de paiement antérieurs ou enregistrés sur une autre Marco apparaissent « Non renseigné ».</p>
+          </Card>
           {message && <p class="text-center text-lg">{message}</p>}
         </div>
       </div>
@@ -771,8 +810,8 @@ function createExportFiles(exported: AccountingExport) {
     exported.sales.map((sale) => [sale.orderId, formatCsvDate(sale.date), memberName(sale), sale.productName, sale.category, sale.amount, csvNumber(Math.abs(Number(sale.price)), 2), sale.status === "replacement" ? "Vente de remplacement" : "Vente"]),
   );
   const rechargesCsv = tableCsv(
-    ["Transaction", "Date", "Membre", "Montant"],
-    exported.recharges.map((recharge) => [recharge.orderId, formatCsvDate(recharge.date), memberName(recharge), csvNumber(Number(recharge.amount), 2)]),
+    ["Transaction", "Date", "Membre", "Montant", "Paiement reçu"],
+    exported.recharges.map((recharge) => [recharge.orderId, formatCsvDate(recharge.date), memberName(recharge), csvNumber(Number(recharge.amount), 2), recharge.paymentMethod === "card" ? "Carte bancaire" : recharge.paymentMethod === "cash" ? "Espèces" : "Non renseigné"]),
   );
   const correctionsCsv = tableCsv(
     ["Transaction d’origine", "Date correction", "Statut", "Produit initial", "Quantité initiale", "Produit corrigé", "Quantité corrigée", "Remboursé", "Redébité", "Variation solde", "Raison", "Administrateur"],

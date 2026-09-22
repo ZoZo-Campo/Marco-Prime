@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "../../ui/alert";
 import { Button } from "../../ui/button";
 import { Skeleton } from "../../ui/skeleton";
 import { MemberSearch } from "../member/member-search";
+import { BirthdayBadge } from "../member/birthday-badge";
 
 export function MemberCard() {
   const { data, loading, error, inputLength, retry, clear } = useMember();
@@ -81,6 +82,7 @@ function MemberCardLoaded({
         </AlertTitle>
         <AlertDescription class={cn("space-y-1", notEnoughMoney && "text-destructive")}>
           <p>Solde : {member.balance}€</p>
+          {member.isBirthday && <BirthdayBadge firstName={member.firstName} />}
           {notEnoughMoney && (
             <p class="font-semibold">
               Paiement impossible — il manque {missingAmount.toFixed(2)}€.

@@ -23,7 +23,7 @@ export function HomePage() {
         <img src="/marco.svg" alt="Marco Logo" class="h-24 sm:h-40" />
         <div class="flex items-end gap-2">
           <span class="text-lg sm:text-2xl">Powered by</span>
-          <img src="/asse.png" alt="ASSE" class="h-12 sm:h-20" />
+          <img src="/enzo-romain.png" alt="Enzo et Romain" class="h-20 w-auto object-contain sm:h-28" />
         </div>
       </button>
       <footer class="shrink-0 px-3 pb-2 text-center text-xs font-medium text-muted-foreground sm:pb-3 sm:text-sm">

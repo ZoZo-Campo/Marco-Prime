@@ -11,9 +11,11 @@ import { Card } from "../components/ui/card";
 import { TICKET_ROUTE_URL } from "./ticket";
 import { apiHeaders, apiUrl } from "../config/api";
 import { MemberSearch } from "../components/features/member/member-search";
+import { BirthdayBadge } from "../components/features/member/birthday-badge";
 import {
   pendingRechargeSignal,
   rechargeAmountSignal,
+  rechargePaymentMethodSignal,
   rechargeErrorSignal,
   rechargeInProgressSignal,
   rechargeInteractionLockedSignal,
@@ -74,6 +76,7 @@ function RechargeContent() {
         transactionId: crypto.randomUUID(),
         cardNumber: member.cardNumber,
         amount: Number(rechargeAmountSignal.value),
+        paymentMethod: rechargePaymentMethodSignal.value,
         ...(adminCardNumber ? { adminCardNumber } : {}),
       } satisfies PendingRecharge;
       pendingRechargeSignal.value = rechargeRequest;
@@ -191,6 +194,13 @@ function RechargeContent() {
       {/* Right side - Aside */}
       <aside class="border-l bg-card px-7 py-5 flex flex-col gap-5">
         <h2 class="text-xl font-semibold">Rechargement</h2>
+        <fieldset disabled={rechargeInteractionLockedSignal.value} class="space-y-2">
+          <legend class="text-sm font-medium">Paiement reçu</legend>
+          <div class="grid grid-cols-2 gap-2">
+            <Button type="button" variant={rechargePaymentMethodSignal.value === "card" ? "default" : "outline"} onClick={() => rechargePaymentMethodSignal.value = "card"}>Carte bancaire</Button>
+            <Button type="button" variant={rechargePaymentMethodSignal.value === "cash" ? "default" : "outline"} onClick={() => rechargePaymentMethodSignal.value = "cash"}>Espèces</Button>
+          </div>
+        </fieldset>
 
         {/* Member info */}
         {member ? (
@@ -201,6 +211,7 @@ function RechargeContent() {
             <p class="text-sm text-muted-foreground">
               Carte: {member.cardNumber}
             </p>
+            {member.isBirthday && <BirthdayBadge firstName={member.firstName} />}
           </Card>
         ) : (
           <Card class="gap-2 py-4 px-4">

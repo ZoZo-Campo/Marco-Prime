@@ -6,6 +6,7 @@ import { accountingService, accountingView } from "../services/accounting.servic
 import { auditEvent } from "../config/logger.js";
 import { StatisticsRepository } from "../repositories/statistics.repository.js";
 import { orderCorrectionService } from "../services/order-correction.service.js";
+import { readRechargeMethods } from "../services/recharge-method.service.js";
 import type {
   accountingExportSchema,
   accountingReadSchema,
@@ -52,12 +53,13 @@ export class AccountingController {
     await this.requireAdmin(request.adminCardNumber);
     const from = new Date(request.from);
     const to = new Date(request.to);
-    const [accounting, sales, recharges, corrections, products] = await Promise.all([
+    const [accounting, sales, recharges, corrections, products, rechargeMethods] = await Promise.all([
       accountingService.get(),
       this.statistics.findSales(from, to),
       this.statistics.findRecharges(from, to),
       orderCorrectionService.all(),
       this.statistics.findProducts(),
+      readRechargeMethods(),
     ]);
     const productNames = new Map(
       products.map((product) => [product.id, product.name]),
@@ -114,6 +116,7 @@ export class AccountingController {
           memberLastName: recharge.memberLastName,
           amount: recharge.price,
           date: recharge.date,
+          paymentMethod: rechargeMethods[String(recharge.id)] ?? null,
         })),
       corrections: corrections
         .filter((correction) =>

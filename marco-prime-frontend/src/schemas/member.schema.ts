@@ -10,6 +10,7 @@ export const memberSchema = z.object({
   balance: moneyStringSchema,
   admin: z.coerce.boolean(),
   class: z.number().nullable().optional(),
+  isBirthday: z.boolean().optional().default(false),
 });
 
 export const memberListSchema = z.array(memberSchema);

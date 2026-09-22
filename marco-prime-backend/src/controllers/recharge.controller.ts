@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { MemberRepository } from "../repositories/member.repository.js";
 import { OrderRepository } from "../repositories/order.repository.js";
 import { auditEvent } from "../config/logger.js";
+import { recordRechargeMethod } from "../services/recharge-method.service.js";
 import {
   rechargeReceiptSchema,
   rechargeRequestSchema,
@@ -32,8 +33,8 @@ export class RechargeController {
     const request = c.req.valid(
       "json" as never,
     ) as RechargeRequest;
-    const { transactionId, cardNumber, adminCardNumber, amount } = request;
-    const requestKey = JSON.stringify({ cardNumber, adminCardNumber, amount });
+    const { transactionId, cardNumber, adminCardNumber, amount, paymentMethod } = request;
+    const requestKey = JSON.stringify({ cardNumber, adminCardNumber, amount, paymentMethod });
     const completed = completedRecharges.get(transactionId);
 
     if (completed) {
@@ -74,6 +75,7 @@ export class RechargeController {
     cardNumber,
     adminCardNumber,
     amount,
+    paymentMethod,
   }: RechargeRequest): Promise<RechargeReceiptDTO> {
 
     const member = await this.memberRepository.findFullByCardNumber(cardNumber);
@@ -115,6 +117,16 @@ export class RechargeController {
       rechargeAmount,
     );
 
+    // The balance is already committed. Never report a failed recharge solely
+    // because the local payment-method annotation could not be saved.
+    let paymentMethodRecorded = true;
+    try {
+      await recordRechargeMethod(recharge.orderId, paymentMethod);
+    } catch (error) {
+      paymentMethodRecorded = false;
+      console.error("Recharge enregistrée, mode de paiement non sauvegardé", error);
+    }
+
     const receipt = {
       success: true,
       transaction: {
@@ -139,6 +151,8 @@ export class RechargeController {
         amount: rechargeAmount.toFixed(2),
         previousBalance: recharge.previousBalance,
         newBalance: recharge.newBalance,
+        paymentMethod,
+        paymentMethodRecorded,
       },
     } satisfies RechargeReceiptDTO;
 

@@ -8,6 +8,7 @@ import {
   Loader2,
   Package,
   Power,
+  RefreshCw,
   Save,
   Search,
   ShieldAlert,
@@ -320,6 +321,9 @@ function ConfigContent() {
         <span class="ml-auto shrink-0 text-sm text-muted-foreground">
           {member.firstName} {member.lastName}
         </span>
+        <Button class="shrink-0" variant="outline" onClick={() => window.location.reload()}>
+          <RefreshCw class="size-5" /> Recharger l’application
+        </Button>
         {kioskControlAvailable && (
           <Button
             class="shrink-0"
