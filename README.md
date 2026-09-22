@@ -193,6 +193,10 @@ cd "$HOME/Desktop/Marco-Prime"
    ou utiliser le pavé numérique tactile.
 3. Dans **Catalogue**, cocher uniquement les produits vendus pendant la soirée.
 4. Appuyer sur **Enregistrer**.
+   Pour changer un tarif, utiliser **Modifier le prix** sur la carte du produit
+   dans Catalogue. Cette action modifie le prix global dans Fouaille pour les
+   prochains achats, y compris sur les autres Marco ; elle ne change pas les
+   ventes déjà enregistrées. Enregistrer d'abord toute sélection en cours.
 5. Revenir sur Home puis ouvrir **Achats**.
 6. Scanner une carte membre, constituer le panier et vérifier le total.
 7. Appuyer une seule fois sur **Payer** et attendre le ticket de confirmation.

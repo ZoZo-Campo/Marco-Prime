@@ -39,3 +39,11 @@ export const adminProductAvailabilitySchema = adminReadSchema.extend({
   expectedAvailable: z.boolean(),
   available: z.boolean(),
 });
+
+const productPrice = z.string().regex(/^\d{1,8}(?:\.\d{1,2})?$/).refine((value) => Number(value) > 0);
+
+export const adminProductPriceSchema = adminReadSchema.extend({
+  productId: z.number().int().positive().safe(),
+  expectedPrice: productPrice,
+  price: productPrice,
+});

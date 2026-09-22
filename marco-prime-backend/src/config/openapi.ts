@@ -179,6 +179,14 @@ export const openApiSpec = {
         responses: { "200": { description: "Availability changed" }, "409": { description: "Concurrent change or automatic synchronization active" } },
       },
     },
+    "/api/v1/admin/products/price": {
+      put: {
+        summary: "Change a Fouaille product price after checking its current price",
+        tags: ["Products"],
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Price changed" }, "409": { description: "Price changed concurrently or automatic synchronization active" } },
+      },
+    },
     "/api/v1/products": {
       get: {
         summary: "Get all products",

@@ -21,7 +21,8 @@ export function auditEvent(
     | "member.created"
     | "member.badge.changed"
     | "product.created"
-    | "product.availability.changed",
+    | "product.availability.changed"
+    | "product.price.changed",
   details: Record<string, unknown>,
 ) {
   if (process.env.NODE_ENV === "test") return;

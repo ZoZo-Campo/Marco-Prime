@@ -34,6 +34,7 @@ import {
   adminMemberSearchSchema,
   adminProductAvailabilitySchema,
   adminProductCreateSchema,
+  adminProductPriceSchema,
   adminReadSchema,
 } from "../validators/admin-management.validator.js";
 
@@ -88,6 +89,9 @@ const router = new Hono()
   )
   .put("/admin/products/availability", zValidator("json", adminProductAvailabilitySchema), (c) =>
     adminManagement.setAvailability(c),
+  )
+  .put("/admin/products/price", zValidator("json", adminProductPriceSchema), (c) =>
+    adminManagement.setPrice(c),
   )
   .get("/products", (c) => productController.getAllProducts(c))
   .get("/catalog-selection", (c) => productController.getCatalogSelection(c))

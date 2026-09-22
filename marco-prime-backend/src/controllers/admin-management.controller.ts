@@ -12,6 +12,7 @@ import {
   adminMemberSearchSchema,
   adminProductAvailabilitySchema,
   adminProductCreateSchema,
+  adminProductPriceSchema,
   adminReadSchema,
 } from "../validators/admin-management.validator.js";
 
@@ -21,6 +22,7 @@ type CreateMember = z.infer<typeof adminMemberCreateSchema>;
 type Badge = z.infer<typeof adminBadgeSchema>;
 type CreateProduct = z.infer<typeof adminProductCreateSchema>;
 type Availability = z.infer<typeof adminProductAvailabilitySchema>;
+type PriceUpdate = z.infer<typeof adminProductPriceSchema>;
 
 function duplicateConflict(error: unknown): never {
   const cause = error as { code?: string; cause?: { code?: string } };
@@ -173,5 +175,30 @@ export class AdminManagementController {
       adminMemberId: admin.id, productId: request.productId, available: request.available,
     });
     return c.json({ success: true });
+  }
+
+  async setPrice(c: Context) {
+    const request = c.req.valid("json" as never) as PriceUpdate;
+    const admin = await this.requireAdmin(request.adminCardNumber);
+    this.requireDirectCatalogAccess();
+    const newPrice = Number(request.price).toFixed(2);
+    await db.transaction(async (tx) => {
+      const [product] = await tx.select({ price: products.price })
+        .from(products).where(eq(products.id, request.productId)).for("update").limit(1);
+      if (!product) throw new HTTPException(404, { message: "Produit introuvable" });
+      if (Number(product.price) !== Number(request.expectedPrice)) {
+        throw new HTTPException(409, { message: "Le prix a changé entre-temps. Rechargez le catalogue avant de réessayer." });
+      }
+      if (product.price !== newPrice) {
+        await tx.update(products).set({ price: newPrice }).where(eq(products.id, request.productId));
+      }
+    });
+    auditEvent("product.price.changed", {
+      adminMemberId: admin.id,
+      productId: request.productId,
+      previousPrice: Number(request.expectedPrice).toFixed(2),
+      price: newPrice,
+    });
+    return c.json({ success: true, price: newPrice });
   }
 }

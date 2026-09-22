@@ -79,6 +79,11 @@ function ConfigContent() {
   const [catalogKeyboard, setCatalogKeyboard] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [editingPrice, setEditingPrice] = useState<CatalogSelectionProduct | null>(null);
+  const [priceDraft, setPriceDraft] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
+  const [priceSaving, setPriceSaving] = useState(false);
   const [section, setSection] = useState<AdminSection>("catalog");
   const [kioskControlAvailable, setKioskControlAvailable] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
@@ -266,6 +271,57 @@ function ConfigContent() {
     } catch (error) {
       console.error("Erreur de configuration du catalogue:", error);
       setSaveState("error");
+    }
+  };
+
+  const openPriceEditor = (product: CatalogSelectionProduct) => {
+    if (dirty) {
+      setPriceError("Enregistrez d’abord votre sélection de produits avant de modifier un prix.");
+      return;
+    }
+    setEditingPrice(product);
+    setPriceDraft(product.price);
+    setPriceError(null);
+    setPriceNotice(null);
+  };
+
+  const savePrice = async () => {
+    if (!editingPrice || priceSaving) return;
+    const normalized = priceDraft.trim().replace(",", ".");
+    if (!/^\d{1,8}(?:\.\d{1,2})?$/.test(normalized) || Number(normalized) <= 0) {
+      setPriceError("Saisissez un prix positif avec deux décimales au maximum.");
+      return;
+    }
+    const nextPrice = Number(normalized).toFixed(2);
+    if (nextPrice === Number(editingPrice.price).toFixed(2)) {
+      setEditingPrice(null);
+      return;
+    }
+    if (!window.confirm(`Changer le prix Fouaille de « ${editingPrice.name} » : ${editingPrice.price} € → ${nextPrice} € ? Ce prix s’appliquera aux prochains achats sur toutes les caisses.`)) return;
+    setPriceSaving(true);
+    setPriceError(null);
+    try {
+      const response = await fetch(apiUrl("admin/products/price"), {
+        method: "PUT",
+        headers: apiHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          adminCardNumber: member.cardNumber,
+          productId: editingPrice.id,
+          expectedPrice: editingPrice.price,
+          price: nextPrice,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error || `Modification refusée (${response.status})`);
+      }
+      await refetch();
+      setEditingPrice(null);
+      setPriceNotice(`Prix de ${editingPrice.name} modifié : ${nextPrice} €.`);
+    } catch (error) {
+      setPriceError(error instanceof Error ? error.message : "Impossible de modifier le prix.");
+    } finally {
+      setPriceSaving(false);
     }
   };
 
@@ -517,28 +573,28 @@ function ConfigContent() {
                 {category.products.map((product) => {
                   const selected = selectedIds.has(product.id);
                   return (
-                    <button
+                    <div
                       key={product.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => toggleProduct(product.id)}
                       class={cn(
-                        "relative min-h-28 border bg-card p-4 text-left transition-all hover:bg-accent",
+                        "relative min-h-28 border bg-card text-left transition-all hover:bg-accent",
                         selected &&
                           "border-primary bg-primary/10 ring-2 ring-primary/40",
                       )}
                     >
-                      {selected && (
-                        <span class="absolute right-3 top-3 rounded-full bg-primary p-1 text-primary-foreground">
-                          <Check class="size-4" />
-                        </span>
-                      )}
-                      <p class="pr-8 text-lg font-semibold">{product.name}</p>
-                      <p class="mt-1 text-sm text-muted-foreground">
-                        {product.title}
-                      </p>
-                      <p class="mt-3 font-medium">{product.price} €</p>
-                    </button>
+                      <button type="button" aria-pressed={selected} onClick={() => toggleProduct(product.id)} class="block w-full p-4 pb-1 text-left">
+                        {selected && (
+                          <span class="absolute right-3 top-3 rounded-full bg-primary p-1 text-primary-foreground">
+                            <Check class="size-4" />
+                          </span>
+                        )}
+                        <p class="pr-8 text-lg font-semibold">{product.name}</p>
+                        <p class="mt-1 text-sm text-muted-foreground">{product.title}</p>
+                        <p class="mt-3 font-medium">{product.price} €</p>
+                      </button>
+                      <button type="button" class="mx-4 mb-3 min-h-10 text-sm font-medium text-primary underline underline-offset-4" onClick={() => openPriceEditor(product)}>
+                        Modifier le prix
+                      </button>
+                    </div>
                   );
                 })}
               </div>
@@ -555,6 +611,31 @@ function ConfigContent() {
       {saveState === "error" && (
         <div class="border-t border-destructive/30 bg-destructive/10 px-7 py-2 text-center text-destructive">
           Impossible d'enregistrer la sélection. Réessayez.
+        </div>
+      )}
+      {priceError && !editingPrice && <p role="alert" class="border-t border-destructive/30 px-7 py-2 text-center text-destructive">{priceError}</p>}
+      {priceNotice && <p role="status" class="border-t border-green-500/30 px-7 py-2 text-center text-green-400">{priceNotice}</p>}
+      {editingPrice && (
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="price-dialog-title" class="w-full max-w-md space-y-4 rounded-lg border bg-card p-6 shadow-2xl">
+            <h2 id="price-dialog-title" class="text-2xl font-bold">Prix de {editingPrice.name}</h2>
+            <p class="text-muted-foreground">Prix actuel dans Fouaille : {editingPrice.price} €</p>
+            <label class="block space-y-2">Nouveau prix (€)
+              <input inputMode="decimal" class="min-h-14 w-full rounded border bg-background px-3 text-2xl" value={priceDraft} onInput={(event) => setPriceDraft(event.currentTarget.value)} />
+            </label>
+            <div class="grid grid-cols-3 gap-2">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "0", "⌫"].map((key) => (
+                <Button key={key} type="button" variant="outline" class="min-h-12 text-xl" onClick={() => setPriceDraft((current) => key === "⌫" ? current.slice(0, -1) : current + key)}>{key}</Button>
+              ))}
+            </div>
+            <Button type="button" variant="outline" class="w-full" onClick={() => setPriceDraft("")}>Effacer le montant saisi</Button>
+            {priceError && <p role="alert" class="text-destructive">{priceError}</p>}
+            <p class="text-sm text-muted-foreground">Le nouveau tarif sera utilisé pour les prochains paiements sur toutes les Marco. Les ventes passées ne changent pas.</p>
+            <div class="flex gap-3">
+              <Button variant="outline" class="flex-1" disabled={priceSaving} onClick={() => { setEditingPrice(null); setPriceError(null); }}>Annuler</Button>
+              <Button class="flex-1" disabled={priceSaving} onClick={() => void savePrice()}>{priceSaving ? "Enregistrement…" : "Enregistrer le prix"}</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
