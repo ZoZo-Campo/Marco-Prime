@@ -16,18 +16,21 @@ import {
 
 type LayoutProps = PropsWithChildren;
 
+/** Retour à l'accueil après inactivité (l'accueil fait office d'écran d'attente). */
+const IDLE_RESET_MS = 120_000;
+
 export function Layout({ children }: LayoutProps) {
-  const { route } = useLocation();
+  const { path, route } = useLocation();
 
   useEffect(() => {
-    let timeout = window.setTimeout(resetSession, 120_000);
+    let timeout = window.setTimeout(resetSession, IDLE_RESET_MS);
 
     function resetSession() {
       if (
         purchaseInteractionLockedSignal.value ||
         rechargeInteractionLockedSignal.value
       ) {
-        timeout = window.setTimeout(resetSession, 120_000);
+        timeout = window.setTimeout(resetSession, IDLE_RESET_MS);
         return;
       }
       shopping.reset();
@@ -39,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
 
     function refreshTimeout() {
       window.clearTimeout(timeout);
-      timeout = window.setTimeout(resetSession, 120_000);
+      timeout = window.setTimeout(resetSession, IDLE_RESET_MS);
     }
 
     window.addEventListener("keydown", refreshTimeout);
@@ -52,8 +55,10 @@ export function Layout({ children }: LayoutProps) {
   }, []);
 
   return (
-    <div class="w-screen h-screen flex flex-col overflow-hidden">
-      <main class="flex-1 flex overflow-auto">{children}</main>
+    <div class="app-shell w-screen flex flex-col overflow-hidden">
+      <main key={path} class="flex-1 flex min-h-0 overflow-auto view-enter">
+        {children}
+      </main>
       <NavBar />
     </div>
   );

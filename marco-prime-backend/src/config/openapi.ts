@@ -34,6 +34,7 @@ export const openApiSpec = {
           cardNumber: { type: "number" },
           balance: { type: "string" },
           admin: { type: "boolean" },
+          contributor: { type: "boolean" },
         },
       },
       Product: {
@@ -70,6 +71,27 @@ export const openApiSpec = {
               },
             },
           },
+        },
+      },
+    },
+    "/ready": {
+      get: {
+        summary: "Readiness check",
+        description: "Check the API and the MySQL connection",
+        tags: ["Health"],
+        responses: {
+          "200": { description: "API and database ready" },
+          "500": { description: "Database unavailable" },
+        },
+      },
+    },
+    "/api/v1/system/status": {
+      get: {
+        summary: "Backend, database and Fouaille status",
+        tags: ["System"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": { description: "Service availability and latency" },
         },
       },
     },
@@ -111,12 +133,11 @@ export const openApiSpec = {
       post: {
         summary: "Search members by name and/or promotion",
         description:
-          "Administrator-only member lookup used when a customer has no RFID card",
+          "Kiosk member lookup used when a customer has no RFID card",
         tags: ["Members"],
         security: [{ bearerAuth: [] }],
         responses: {
           "200": { description: "Matching card-enabled members" },
-          "403": { description: "Administrator card required" },
         },
       },
     },

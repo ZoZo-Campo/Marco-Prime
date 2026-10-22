@@ -63,6 +63,24 @@ describe("AccountingService", () => {
     expect(JSON.parse(await readFile(path.join(directory, "accounting.json"), "utf8"))).not.toHaveProperty("vat");
   });
 
+  it("stores the event start and end times", async () => {
+    const saved = await accountingService.replace({
+      status: "draft",
+      eventName: "Soirée horaires",
+      eventDate: "2030-04-01",
+      eventStartTime: "18:30",
+      eventEndTime: "01:15",
+      rows: [],
+    });
+    expect(saved.eventStartTime).toBe("18:30");
+    expect(saved.eventEndTime).toBe("01:15");
+
+    accountingService.resetForTests();
+    const reopened = await accountingService.get();
+    expect(reopened.eventStartTime).toBe("18:30");
+    expect(reopened.eventEndTime).toBe("01:15");
+  });
+
   it("keeps positive per-liter prices for future events in the same file", async () => {
     await accountingService.replace({
       status: "draft",
@@ -102,6 +120,37 @@ describe("AccountingService", () => {
     expect(
       await readFile(path.join(directory, "accounting.json"), "utf8"),
     ).toContain('"productDefaults"');
+  });
+
+  it("serializes concurrent saves without losing prior defaults", async () => {
+    const first = accountingService.replace({
+      status: "draft",
+      eventName: "Première soirée",
+      eventDate: "2030-05-01",
+      rows: [
+        {
+          id: "f31efb78-158b-4f28-914f-8f42c86e98f9",
+          productId: 1,
+          label: "Primus",
+          liters: "10",
+          purchasePricePerLiter: "3.14",
+          revenue: "40",
+        },
+      ],
+    });
+    const second = accountingService.replace({
+      status: "draft",
+      eventName: "Deuxième soirée",
+      eventDate: "2030-05-02",
+      rows: [],
+    });
+
+    await Promise.all([first, second]);
+    const saved = await accountingService.get();
+    expect(saved.eventName).toBe("Deuxième soirée");
+    expect(saved.productDefaults).toEqual([
+      { productId: 1, purchasePricePerLiter: "3.14" },
+    ]);
   });
 
   it("records closure and can reopen an event without losing its rows", async () => {

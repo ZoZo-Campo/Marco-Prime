@@ -8,6 +8,7 @@ export const accountingRowSchema = z.object({
   productId: z.number().int().positive().nullable(),
   label: z.string(),
   liters: decimalStringSchema,
+  units: decimalStringSchema.optional().default("0"),
   purchasePricePerLiter: decimalStringSchema,
   revenue: decimalStringSchema,
   cost: moneyStringSchema,
@@ -19,6 +20,8 @@ export const accountingSchema = z.object({
   status: z.enum(["draft", "closed"]),
   eventName: z.string(),
   eventDate: z.string(),
+  eventStartTime: z.string().regex(/^\d{2}:\d{2}$/).optional().default("16:30"),
+  eventEndTime: z.string().regex(/^\d{2}:\d{2}$/).optional().default("23:59"),
   rows: z.array(accountingRowSchema),
   productDefaults: z.array(
     z.object({
@@ -30,6 +33,7 @@ export const accountingSchema = z.object({
   updatedAt: z.string().datetime(),
   totals: z.object({
     liters: decimalStringSchema,
+    units: decimalStringSchema.optional().default("0"),
     cost: moneyStringSchema,
     revenue: moneyStringSchema,
     result: moneyStringSchema,
@@ -58,6 +62,17 @@ const exportedRechargeSchema = z.object({
   amount: moneyStringSchema,
   date: z.string().datetime(),
   paymentMethod: z.enum(["card", "cash"]).nullable(),
+});
+
+const rechargeSummarySchema = z.object({
+  total: moneyStringSchema,
+  card: moneyStringSchema,
+  cash: moneyStringSchema,
+  unknown: moneyStringSchema,
+  count: z.number().int().nonnegative(),
+  cardCount: z.number().int().nonnegative(),
+  cashCount: z.number().int().nonnegative(),
+  unknownCount: z.number().int().nonnegative(),
 });
 
 const exportedCorrectionSchema = z.object({
@@ -91,6 +106,7 @@ export const accountingExportSchema = z.object({
   accounting: accountingSchema,
   sales: z.array(exportedSaleSchema),
   recharges: z.array(exportedRechargeSchema),
+  rechargeSummary: rechargeSummarySchema.optional(),
   corrections: z.array(exportedCorrectionSchema),
 });
 

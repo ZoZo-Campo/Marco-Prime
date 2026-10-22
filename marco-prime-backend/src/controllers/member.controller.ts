@@ -25,18 +25,14 @@ export class MemberController {
   }
 
   async searchMembers(c: Context) {
-    const { adminCardNumber, query, promotion } = c.req.valid(
+    const { query, promotion } = c.req.valid(
       "json" as never,
     ) as MemberSearchRequest;
-    const admin = await this.memberRepository.findFullByCardNumber(
-      adminCardNumber,
-    );
-    if (!admin?.admin) {
-      throw new HTTPException(403, {
-        message: "Une carte administrateur est requise",
-      });
-    }
 
     return c.json(await this.memberRepository.search(query, 20, promotion));
+  }
+
+  async listPromotions(c: Context) {
+    return c.json(await this.memberRepository.listPromotions());
   }
 }

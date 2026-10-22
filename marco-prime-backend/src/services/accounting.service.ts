@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
@@ -7,6 +8,7 @@ const rowSchema = z.object({
   productId: z.number().int().positive().nullable().default(null),
   label: z.string(),
   liters: z.string(),
+  units: z.string().default("0"),
   purchasePricePerLiter: z.string(),
   revenue: z.string(),
 });
@@ -21,16 +23,21 @@ const storedSchema = z.object({
   status: z.enum(["draft", "closed"]).default("draft"),
   eventName: z.string(),
   eventDate: z.string(),
+  eventStartTime: z.string().default("16:30"),
+  eventEndTime: z.string().default("23:59"),
   rows: z.array(rowSchema),
   productDefaults: z.array(productDefaultSchema).default([]),
   closedAt: z.string().datetime().nullable().default(null),
   updatedAt: z.string().datetime(),
 });
+type StoredAccounting = z.infer<typeof storedSchema>;
 
 export type AccountingInput = {
   status: "draft" | "closed";
   eventName: string;
   eventDate: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
   rows: Array<Omit<z.infer<typeof rowSchema>, "productId"> & { productId: number }>;
 };
 
@@ -39,6 +46,8 @@ const emptyAccounting = (): z.infer<typeof storedSchema> => ({
   status: "draft",
   eventName: "Soirée Marco",
   eventDate: new Date().toISOString().slice(0, 10),
+  eventStartTime: "16:30",
+  eventEndTime: "23:59",
   rows: [],
   productDefaults: [],
   closedAt: null,
@@ -46,7 +55,8 @@ const emptyAccounting = (): z.infer<typeof storedSchema> => ({
 });
 
 class AccountingService {
-  private value: z.infer<typeof storedSchema> | undefined;
+  private value: StoredAccounting | undefined;
+  private pendingWrite: Promise<unknown> = Promise.resolve();
 
   private get filePath() {
     return path.join(process.env.MARCO_DATA_DIR || "./data", "accounting.json");
@@ -66,7 +76,15 @@ class AccountingService {
     return structuredClone(this.value);
   }
 
-  async replace(input: AccountingInput) {
+  replace(input: AccountingInput): Promise<StoredAccounting> {
+    const operation = this.pendingWrite
+      .catch(() => undefined)
+      .then(() => this.applyReplace(input));
+    this.pendingWrite = operation.catch(() => undefined);
+    return operation;
+  }
+
+  private async applyReplace(input: AccountingInput) {
     const current = await this.get();
     const now = new Date().toISOString();
     const productDefaults = new Map(
@@ -88,10 +106,13 @@ class AccountingService {
       status: input.status,
       eventName: input.eventName.trim(),
       eventDate: input.eventDate,
+      eventStartTime: input.eventStartTime ?? "16:30",
+      eventEndTime: input.eventEndTime ?? "23:59",
       rows: input.rows.map((row) => ({
         ...row,
         label: row.label.trim(),
         liters: normalize(row.liters, 3),
+        units: normalize(row.units ?? "0", 2),
         purchasePricePerLiter: normalize(row.purchasePricePerLiter, 4),
         revenue: normalize(row.revenue, 2),
       })),
@@ -124,7 +145,7 @@ function normalize(value: string, decimals: number) {
 }
 
 async function atomicWrite(targetPath: string, value: unknown) {
-  const temporaryPath = `${targetPath}.${process.pid}.tmp`;
+  const temporaryPath = `${targetPath}.${process.pid}.${randomUUID()}.tmp`;
   await mkdir(path.dirname(targetPath), { recursive: true });
   await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   await rename(temporaryPath, targetPath);
@@ -132,21 +153,26 @@ async function atomicWrite(targetPath: string, value: unknown) {
 
 export function accountingView(value: Awaited<ReturnType<AccountingService["get"]>>) {
   const rows = value.rows.map((row) => {
-    const cost = Number(row.liters) * Number(row.purchasePricePerLiter);
+    const liters = Number(row.liters);
+    const units = Number(row.units ?? "0");
+    const unitPrice = Number(row.purchasePricePerLiter);
+    const cost = liters * unitPrice + units * unitPrice;
     const result = Number(row.revenue) - cost;
-    return { ...row, cost: cost.toFixed(2), result: result.toFixed(2) };
+    return { ...row, liters: row.liters, units: row.units ?? "0", cost: cost.toFixed(2), result: result.toFixed(2) };
   });
   const totals = rows.reduce((sum, row) => ({
     liters: sum.liters + Number(row.liters),
+    units: sum.units + Number(row.units ?? "0"),
     cost: sum.cost + Number(row.cost),
     revenue: sum.revenue + Number(row.revenue),
     result: sum.result + Number(row.result),
-  }), { liters: 0, cost: 0, revenue: 0, result: 0 });
+  }), { liters: 0, units: 0, cost: 0, revenue: 0, result: 0 });
   return {
     ...value,
     rows,
     totals: {
       liters: totals.liters.toFixed(3).replace(/0+$/, "").replace(/\.$/, ""),
+      units: totals.units.toFixed(2).replace(/0+$/, "").replace(/\.$/, ""),
       cost: totals.cost.toFixed(2),
       revenue: totals.revenue.toFixed(2),
       result: totals.result.toFixed(2),

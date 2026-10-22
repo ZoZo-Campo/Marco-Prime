@@ -1,6 +1,6 @@
 import { useLocation } from "preact-iso";
 import { useEffect } from "preact/hooks";
-import { AlertTriangle, Loader2, CreditCard } from "lucide-preact";
+import { AlertTriangle, Loader2, ShieldCheck } from "lucide-preact";
 import { MemberProvider, useMember } from "../contexts/member-context";
 import { setTicket } from "../contexts/ticket-context";
 import { useRfid } from "../hooks/use-rfid";
@@ -12,6 +12,7 @@ import { TICKET_ROUTE_URL } from "./ticket";
 import { apiHeaders, apiUrl } from "../config/api";
 import { MemberSearch } from "../components/features/member/member-search";
 import { BirthdayBadge } from "../components/features/member/birthday-badge";
+import { CardCodeEntry } from "../components/features/buy/card-code-entry";
 import {
   pendingRechargeSignal,
   rechargeAmountSignal,
@@ -25,6 +26,8 @@ import {
 } from "../contexts/recharge-state";
 
 export const RECHARGE_ROUTE_URL = "/recharge";
+
+const RECHARGE_PRESETS = [5, 10, 15, 20, 50, 100] as const;
 
 export function RechargePage() {
   return (
@@ -182,6 +185,24 @@ function RechargeContent() {
         <p class="text-6xl font-bold mb-4">
           {amount > 0 ? `${amount.toFixed(2)} €` : "0.00 €"}
         </p>
+        <div class="grid w-72 grid-cols-3 gap-2">
+          {RECHARGE_PRESETS.map((preset) => (
+            <Button
+              key={preset}
+              type="button"
+              variant={
+                rechargeAmountSignal.value === String(preset)
+                  ? "default"
+                  : "outline"
+              }
+              class="h-11 text-base font-semibold"
+              onClick={() => (rechargeAmountSignal.value = String(preset))}
+              disabled={rechargeInteractionLockedSignal.value}
+            >
+              {preset} €
+            </Button>
+          ))}
+        </div>
         <div class="w-72">
           <Keypad
             value={rechargeAmountSignal.value}
@@ -197,7 +218,7 @@ function RechargeContent() {
         <fieldset disabled={rechargeInteractionLockedSignal.value} class="space-y-2">
           <legend class="text-sm font-medium">Paiement reçu</legend>
           <div class="grid grid-cols-2 gap-2">
-            <Button type="button" variant={rechargePaymentMethodSignal.value === "card" ? "default" : "outline"} onClick={() => rechargePaymentMethodSignal.value = "card"}>Carte bancaire</Button>
+            <Button type="button" variant={rechargePaymentMethodSignal.value === "card" ? "default" : "outline"} onClick={() => rechargePaymentMethodSignal.value = "card"}>CB</Button>
             <Button type="button" variant={rechargePaymentMethodSignal.value === "cash" ? "default" : "outline"} onClick={() => rechargePaymentMethodSignal.value = "cash"}>Espèces</Button>
           </div>
         </fieldset>
@@ -286,11 +307,11 @@ function RechargeContent() {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <Card class="w-96 gap-4 py-6">
             <div class="px-6 text-center">
-              <CreditCard class="size-16 mx-auto mb-4 text-primary" />
-              <h2 class="text-xl font-bold mb-2">Carte admin requise</h2>
+              <ShieldCheck class="size-12 mx-auto mb-3 text-primary" />
+              <h2 class="text-xl font-bold mb-2">Autorisation administrateur</h2>
               <p class="text-muted-foreground">
-                Veuillez scanner une carte administrateur pour valider le
-                rechargement
+                La carte RFID reste active en arrière-plan. Vous pouvez aussi
+                saisir le code de la carte admin.
               </p>
             </div>
             <div class="px-6 py-4 border-t border-b text-center">
@@ -300,6 +321,18 @@ function RechargeContent() {
               </p>
             </div>
             <div class="px-6">
+              <p class="mb-3 text-sm text-muted-foreground">
+                Saisissez le code de la carte admin sur le pavé :
+              </p>
+              <CardCodeEntry
+                title="Code admin"
+                onSubmit={(adminCode) => {
+                  processRecharge(Number(adminCode));
+                  return false;
+                }}
+              />
+            </div>
+            <div class="px-6 mt-3">
               <Button variant="outline" class="w-full" onClick={handleCancel}>
                 Annuler
               </Button>

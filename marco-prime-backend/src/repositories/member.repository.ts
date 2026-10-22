@@ -13,6 +13,7 @@ export class MemberRepository {
         cardNumber: members.cardNumber,
         balance: members.balance,
         admin: members.admin,
+        contributor: members.contributor,
         birthMonthDay: sql<string | null>`DATE_FORMAT(${members.birthDate}, '%m-%d')`,
       })
       .from(members)
@@ -35,7 +36,11 @@ export class MemberRepository {
   }
 
   async search(query: string, limit = 12, promotion?: number) {
-    const pattern = `%${query.trim()}%`;
+    const trimmed = query.trim();
+    const pattern = `%${trimmed}%`;
+    const cardPattern = /^\d+$/.test(trimmed)
+      ? like(sql`cast(${members.cardNumber} as char)`, pattern)
+      : undefined;
     const found = await db
       .select({
         id: members.id,
@@ -44,6 +49,7 @@ export class MemberRepository {
         cardNumber: members.cardNumber,
         balance: members.balance,
         admin: members.admin,
+        contributor: members.contributor,
         class: members.class,
         birthMonthDay: sql<string | null>`DATE_FORMAT(${members.birthDate}, '%m-%d')`,
       })
@@ -52,11 +58,12 @@ export class MemberRepository {
         and(
           isNotNull(members.cardNumber),
           promotion === undefined ? undefined : eq(members.class, promotion),
-          query.trim().length < 2 ? undefined : or(
+          trimmed.length < 1 ? undefined : or(
           like(members.firstName, pattern),
           like(members.lastName, pattern),
           sql`concat(${members.firstName}, ' ', ${members.lastName}) like ${pattern}`,
           sql`concat(${members.lastName}, ' ', ${members.firstName}) like ${pattern}`,
+          cardPattern,
           ),
         ),
       )
@@ -66,6 +73,18 @@ export class MemberRepository {
       ...member,
       isBirthday: isBirthdayToday(birthMonthDay),
     }));
+  }
+
+  async listPromotions(limit = 100) {
+    const rows = await db
+      .selectDistinct({ class: members.class })
+      .from(members)
+      .where(and(isNotNull(members.class), isNotNull(members.cardNumber)))
+      .orderBy(asc(members.class))
+      .limit(limit);
+    return rows
+      .map((row) => row.class)
+      .filter((year): year is number => typeof year === "number" && year >= 2000 && year <= 2100);
   }
 
 }

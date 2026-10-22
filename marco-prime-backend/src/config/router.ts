@@ -11,7 +11,13 @@ import { WifiController } from "../controllers/wifi.controller.js";
 import { AccountingController } from "../controllers/accounting.controller.js";
 import { OrderCorrectionController } from "../controllers/order-correction.controller.js";
 import { AdminManagementController } from "../controllers/admin-management.controller.js";
+import { ConfigAuthController } from "../controllers/config-auth.controller.js";
 import { cardNumberParamSchema, memberSearchSchema } from "../validators/members.validator.js";
+import {
+  configPasswordDisableSchema,
+  configPasswordSetupSchema,
+  configPasswordUnlockSchema,
+} from "../validators/config-auth.validator.js";
 import { historyQuerySchema } from "../validators/orders.validator.js";
 import {
   catalogSelectionRequestSchema,
@@ -19,7 +25,11 @@ import {
   productTypeParamSchema,
 } from "../validators/products.validator.js";
 import { purchaseRequestSchema } from "../validators/purchase.validator.js";
-import { rechargeRequestSchema } from "../validators/recharge.validator.js";
+import {
+  rechargeCorrectionSchema,
+  rechargeMethodUpdateSchema,
+  rechargeRequestSchema,
+} from "../validators/recharge.validator.js";
 import {
   statisticsCostQuerySchema,
   statisticsCostUpdateSchema,
@@ -37,7 +47,6 @@ import {
   adminProductPriceSchema,
   adminReadSchema,
 } from "../validators/admin-management.validator.js";
-
 const memberController = new MemberController();
 const productController = new ProductController();
 const orderController = new OrderController();
@@ -49,8 +58,30 @@ const wifiController = new WifiController();
 const accountingController = new AccountingController();
 const correctionController = new OrderCorrectionController();
 const adminManagement = new AdminManagementController();
+const configAuthController = new ConfigAuthController();
 
 const router = new Hono()
+  .get("/config-auth/status", (c) => configAuthController.status(c))
+  .post(
+    "/config-auth/unlock",
+    zValidator("json", configPasswordUnlockSchema),
+    (c) => configAuthController.unlock(c),
+  )
+  .post(
+    "/config-auth/setup",
+    zValidator("json", configPasswordSetupSchema),
+    (c) => configAuthController.setup(c),
+  )
+  .put(
+    "/config-auth/password",
+    zValidator("json", configPasswordSetupSchema),
+    (c) => configAuthController.setup(c),
+  )
+  .post(
+    "/config-auth/disable",
+    zValidator("json", configPasswordDisableSchema),
+    (c) => configAuthController.disable(c),
+  )
   .get("/system/status", (c) => systemController.getStatus(c))
   .post("/system/wifi/status", zValidator("json", wifiAdminSchema), (c) =>
     wifiController.getStatus(c),
@@ -66,6 +97,7 @@ const router = new Hono()
     zValidator("param", cardNumberParamSchema),
     (c) => memberController.getMemberByCardNumber(c),
   )
+  .get("/member-promotions", (c) => memberController.listPromotions(c))
   .post("/members/search", zValidator("json", memberSearchSchema), (c) =>
     memberController.searchMembers(c),
   )
@@ -147,6 +179,16 @@ const router = new Hono()
   )
   .post("/recharge", zValidator("json", rechargeRequestSchema), (c) =>
     rechargeController.createRecharge(c),
+  )
+  .put(
+    "/recharge-method",
+    zValidator("json", rechargeMethodUpdateSchema),
+    (c) => rechargeController.updateMethod(c),
+  )
+  .post(
+    "/recharge-corrections/apply",
+    zValidator("json", rechargeCorrectionSchema),
+    (c) => rechargeController.cancel(c),
   );
 
 export { router };

@@ -1,10 +1,8 @@
 import type { ComponentChildren } from "preact";
 import {
-  AlertCircle,
   BarChart3,
   Calculator,
   Check,
-  CreditCard,
   Loader2,
   Package,
   Power,
@@ -29,12 +27,11 @@ import { cn } from "../utils/cn";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { StatisticsPanel } from "../components/features/config/statistics-panel";
-import { WifiPanel } from "../components/features/config/wifi-panel";
 import { AccountingPanel } from "../components/features/config/accounting-panel";
 import { MembersPanel } from "../components/features/config/members-panel";
 import { FouailleProductsPanel } from "../components/features/config/fouaille-products-panel";
-import { Keypad } from "../components/features/recharge/keypad";
-import { OnScreenKeyboard } from "../components/shared/on-screen-keyboard";
+import { WifiPanel } from "../components/features/config/wifi-panel";
+import { AdminAuthPanel } from "../components/features/auth/admin-auth-panel";
 
 export const CONFIG_ROUTE_URL = "/config";
 
@@ -51,17 +48,7 @@ export function ConfigPage() {
 }
 
 function ConfigContent() {
-  const {
-    data: member,
-    loading: memberLoading,
-    error: memberError,
-    inputLength,
-    retry,
-    submitCardNumber,
-    clear,
-    pause,
-  } = useMember();
-  const [manualCardNumber, setManualCardNumber] = useState("");
+  const { data: member, pause } = useMember();
   const isAdmin = member?.admin === true;
   useEffect(() => {
     if (isAdmin) pause();
@@ -76,7 +63,6 @@ function ConfigContent() {
   });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [catalogQuery, setCatalogQuery] = useState("");
-  const [catalogKeyboard, setCatalogKeyboard] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [editingPrice, setEditingPrice] = useState<CatalogSelectionProduct | null>(null);
@@ -133,86 +119,13 @@ function ConfigContent() {
     })).filter((category) => category.products.length > 0);
   }, [categories, catalogQuery]);
 
-  if (!member) {
-    return (
-      <div class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-3">
-        <Card class="grid w-full max-w-4xl gap-4 p-4 md:grid-cols-[1fr_20rem]">
-          <div class="flex flex-col items-center justify-center gap-3 text-center">
-            {memberLoading ? (
-              <Loader2 class="size-12 animate-spin text-primary" />
-            ) : memberError ? (
-              <AlertCircle class="size-14 text-destructive" />
-            ) : (
-              <CreditCard class="size-14 text-primary" />
-            )}
-            <h1 class="text-2xl font-bold">Accès administrateur</h1>
-            <p class={cn("text-base", memberError ? "text-destructive" : "text-muted-foreground")}>
-              {memberError
-                ? "Carte inconnue ou serveur indisponible. Corrigez le numéro ou réessayez."
-                : inputLength > 0
-                  ? `Lecture RFID en cours : ${inputLength} chiffre${inputLength > 1 ? "s" : ""}.`
-                  : "Scannez la carte ou saisissez son numéro avec le pavé tactile."}
-            </p>
-            {memberError && (
-              <Button variant="outline" onClick={() => void retry()} disabled={memberLoading}>
-                Réessayer la même carte
-              </Button>
-            )}
-          </div>
-
-          <form
-            class="flex flex-col gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              submitCardNumber(manualCardNumber);
-            }}
-          >
-            <div
-              class="flex min-h-12 items-center justify-center rounded-md border bg-background px-3 text-center text-2xl font-semibold tracking-wider"
-              aria-label="Numéro de carte saisi"
-            >
-              {manualCardNumber || "—"}
-            </div>
-            <Keypad
-              value={manualCardNumber}
-              onChange={setManualCardNumber}
-              maxLength={32}
-              disabled={memberLoading}
-            />
-            <Button
-              type="submit"
-              size="lg"
-              disabled={memberLoading || !/^\d{5,32}$/.test(manualCardNumber)}
-            >
-              {memberLoading ? <Loader2 class="size-5 animate-spin" /> : <Check class="size-5" />}
-              Valider la carte
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                setManualCardNumber("");
-                clear();
-              }}
-            >
-              Effacer et recommencer
-            </Button>
-          </form>
-        </Card>
-      </div>
-    );
-  }
-
   if (!isAdmin) {
     return (
-      <CenteredCard>
-        <ShieldAlert class="size-16 text-destructive" />
-        <h1 class="text-3xl font-bold">Accès administrateur requis</h1>
-        <p class="text-lg text-muted-foreground">
-          La carte de {member.firstName} {member.lastName} n'est pas autorisée.
-        </p>
-        <Button onClick={clear}>Scanner une autre carte</Button>
-      </CenteredCard>
+      <div class="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-3">
+        <div class="w-full max-w-lg">
+          <AdminAuthPanel allowPassword />
+        </div>
+      </div>
     );
   }
 
@@ -368,28 +281,38 @@ function ConfigContent() {
         <Button variant={section === "members" ? "default" : "outline"} onClick={() => setSection("members")}>
           <UsersRound class="size-5" /> Membres
         </Button>
+        <span class="ml-auto" />
         <Button
+          class="shrink-0"
           variant={section === "wifi" ? "default" : "outline"}
+          size="sm"
           onClick={() => setSection("wifi")}
         >
           <Wifi class="size-5" /> Wi-Fi
         </Button>
-        <span class="ml-auto shrink-0 text-sm text-muted-foreground">
-          {member.firstName} {member.lastName}
-        </span>
-        <Button class="shrink-0" variant="outline" onClick={() => window.location.reload()}>
-          <RefreshCw class="size-5" /> Recharger l’application
+        <Button
+          class="shrink-0"
+          variant="outline"
+          size="icon"
+          title="Recharger l’application"
+          aria-label="Recharger l’application"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw class="size-5" />
         </Button>
         {kioskControlAvailable && (
           <Button
             class="shrink-0"
             variant="destructive"
+            size="icon"
+            title="Fermer Marco"
+            aria-label="Fermer Marco"
             onClick={() => {
               setKioskExitError(null);
               setShowExitDialog(true);
             }}
           >
-            <Power class="size-5" /> Fermer Marco
+            <Power class="size-5" />
           </Button>
         )}
       </nav>
@@ -408,8 +331,8 @@ function ConfigContent() {
                   Fermer l’écran Marco ?
                 </h2>
                 <p class="mt-2 text-muted-foreground">
-                  Chromium sera fermé et le Bureau réapparaîtra. Docker et
-                  l’API continueront de fonctionner.
+                  Le navigateur sera fermé et le Bureau réapparaîtra. Le serveur
+                  Marco continuera de fonctionner.
                 </p>
               </div>
               <Button
@@ -475,20 +398,20 @@ function ConfigContent() {
     </div>;
   }
 
-  if (section === "wifi") {
-    return (
-      <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
-        {adminNavigation}
-        <WifiPanel adminCardNumber={member.cardNumber} />
-      </div>
-    );
-  }
-
   if (section === "accounting") {
     return (
       <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
         {adminNavigation}
         <AccountingPanel adminCardNumber={member.cardNumber} />
+      </div>
+    );
+  }
+
+  if (section === "wifi") {
+    return (
+      <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+        {adminNavigation}
+        <WifiPanel adminCardNumber={member.cardNumber} />
       </div>
     );
   }
@@ -531,13 +454,7 @@ function ConfigContent() {
           <Search class="size-5 text-muted-foreground" />
           <input class="min-h-12 min-w-0 flex-1 bg-transparent text-lg outline-none" value={catalogQuery}
             placeholder="Chercher un produit à vendre ce soir" onInput={(event) => setCatalogQuery(event.currentTarget.value)} />
-          <Button variant="ghost" size="sm" onClick={() => setCatalogKeyboard(!catalogKeyboard)}>
-            {catalogKeyboard ? "Masquer clavier" : "Clavier tactile"}
-          </Button>
         </div>
-        {catalogKeyboard && <div class="mb-5 overflow-x-auto rounded border bg-background p-2">
-          <OnScreenKeyboard value={catalogQuery} onChange={setCatalogQuery} />
-        </div>}
         {catalogLoading && (
           <div class="flex h-full items-center justify-center">
             <Loader2 class="size-12 animate-spin text-primary" />

@@ -1,12 +1,14 @@
 import { createContext } from "preact";
 import type { PropsWithChildren } from "preact/compat";
-import { useContext, useEffect, useState } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type z from "zod";
 import { useApi } from "../hooks/use-api";
 import { useRfid } from "../hooks/use-rfid";
 import { memberSchema } from "../schemas/member.schema";
 import type { MemberSchema } from "../schemas/member.schema";
 import { apiUrl } from "../config/api";
+import { shopping } from "./shopping-context";
+import { addRecentMember } from "../utils/recent-members";
 
 const MemberContext = createContext<{
   data: z.infer<typeof memberSchema> | null;
@@ -56,11 +58,22 @@ export function MemberProvider({
       : null;
   const data = selectedMember ?? scannedMember;
 
+  const lastCardRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
-    if (memberCardId) {
-      setSelectedMember(null);
-      refetch();
+    if (data) addRecentMember(data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.id]);
+
+  useEffect(() => {
+    if (!memberCardId) return;
+    const nextCard = String(memberCardId);
+    if (lastCardRef.current !== undefined && lastCardRef.current !== nextCard) {
+      shopping.reset();
     }
+    lastCardRef.current = nextCard;
+    setSelectedMember(null);
+    refetch();
   }, [memberCardId, scanId]);
 
   const pause = () => setPaused(true);

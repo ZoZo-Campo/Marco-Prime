@@ -49,7 +49,7 @@ export function ProductGrid() {
 
   if (loading && !data) {
     return (
-      <main class="flex-1 grid grid-cols-3 grid-rows-3 gap-2">
+      <main class="flex-1 grid grid-cols-[repeat(3,minmax(0,1fr))] auto-rows-[14rem] gap-6">
         {new Array(PRODUCT_GRID_PLACEHOLDER_COUNT).fill(null).map((_, id) => (
           <ProductSkeleton key={id} />
         ))}
@@ -57,7 +57,7 @@ export function ProductGrid() {
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <main class="flex-1 flex flex-col items-center justify-center gap-4 text-center">
         <AlertCircle class="size-10 text-destructive" />
@@ -83,7 +83,7 @@ export function ProductGrid() {
   }
 
   return (
-    <main class="flex-1 grid grid-cols-3 auto-rows-[minmax(140px,1fr)] gap-2 overflow-y-auto pr-1">
+    <main class="no-scrollbar flex-1 grid grid-cols-[repeat(3,minmax(0,1fr))] auto-rows-[14rem] content-start gap-6 overflow-y-auto pr-1">
       {data.data.map((product) => (
         <ProductItem
           key={product.id}
