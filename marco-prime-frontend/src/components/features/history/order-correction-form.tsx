@@ -327,7 +327,7 @@ function correctionPreview(
   if (!product || !Number.isInteger(amount) || amount < 1 || !order.member) {
     return null;
   }
-  const originalCents = Math.abs(Math.round(Number(order.price) * 100));
+  const originalCents = Math.abs(Math.round(Number(order.effectivePrice) * 100));
   const currentBalanceCents = Math.round(Number(order.member.balance) * 100);
   if (!Number.isSafeInteger(originalCents) || !Number.isSafeInteger(currentBalanceCents)) {
     return null;

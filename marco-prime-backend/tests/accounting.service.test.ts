@@ -153,6 +153,31 @@ describe("AccountingService", () => {
     ]);
   });
 
+  it("counts a single real quantity when liters and units are both present", async () => {
+    const saved = await accountingService.replace({
+      status: "draft",
+      eventName: "Soirée bouteilles",
+      eventDate: "2030-06-01",
+      rows: [
+        {
+          id: "7b97f2fc-6eab-4f43-9b9c-7e4f3d7c8a11",
+          productId: 9,
+          label: "Bouteille",
+          liters: "3",
+          units: "4",
+          purchasePricePerLiter: "2.50",
+          revenue: "20",
+        },
+      ],
+    });
+
+    const view = accountingView(saved);
+    expect(view.rows[0]?.cost).toBe("10.00");
+    expect(view.rows[0]?.result).toBe("10.00");
+    expect(view.totals.cost).toBe("10.00");
+    expect(view.totals.units).toBe("4");
+  });
+
   it("records closure and can reopen an event without losing its rows", async () => {
     const input = {
       eventName: "Soirée à clôturer",

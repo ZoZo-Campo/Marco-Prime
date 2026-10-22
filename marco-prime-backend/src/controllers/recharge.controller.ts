@@ -151,18 +151,20 @@ export class RechargeController {
         request.originalOrderId,
       );
     } catch (error) {
-      await rechargeCorrectionService.removePending(request.originalOrderId);
       const message = error instanceof Error ? error.message : "";
       if (message === "RECHARGE_CORRECTION_NOT_FOUND") {
+        await rechargeCorrectionService.removePending(request.originalOrderId);
         throw new HTTPException(404, { message: "Rechargement introuvable" });
       }
       if (message === "RECHARGE_CORRECTION_INSUFFICIENT_BALANCE") {
+        await rechargeCorrectionService.removePending(request.originalOrderId);
         throw new HTTPException(402, {
           message:
             "Solde insuffisant : le membre a déjà dépensé une partie de ce rechargement",
         });
       }
       if (message.startsWith("RECHARGE_CORRECTION_")) {
+        await rechargeCorrectionService.removePending(request.originalOrderId);
         throw new HTTPException(400, {
           message: "Ce rechargement ne peut pas être annulé",
         });

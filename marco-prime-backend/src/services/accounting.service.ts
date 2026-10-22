@@ -156,7 +156,8 @@ export function accountingView(value: Awaited<ReturnType<AccountingService["get"
     const liters = Number(row.liters);
     const units = Number(row.units ?? "0");
     const unitPrice = Number(row.purchasePricePerLiter);
-    const cost = liters * unitPrice + units * unitPrice;
+    const quantity = units > 0 ? units : liters;
+    const cost = quantity * unitPrice;
     const result = Number(row.revenue) - cost;
     return { ...row, liters: row.liters, units: row.units ?? "0", cost: cost.toFixed(2), result: result.toFixed(2) };
   });

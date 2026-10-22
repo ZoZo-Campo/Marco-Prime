@@ -101,6 +101,7 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
   const [lastExportSignature, setLastExportSignature] = useState<string | null>(null);
   const loaded = useRef(false);
   const lastSavedSignature = useRef("");
+  const lastFailedSignature = useRef("");
 
   const draft = useMemo<AccountingDraft>(
     () => ({ status, eventName, eventDate, eventStartTime, eventEndTime, rows }),
@@ -186,8 +187,8 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
       return null;
     }
     setSaving(true);
+    const requestSignature = signature(nextDraft);
     try {
-      const requestSignature = signature(nextDraft);
       const response = await fetch(apiUrl("accounting"), {
         method: "PUT",
         headers: apiHeaders({ "Content-Type": "application/json" }),
@@ -206,9 +207,11 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
       setAccounting(value);
       setPurchasePriceDefaults(defaultsMap(value));
       lastSavedSignature.current = requestSignature;
+      lastFailedSignature.current = "";
       if (!quiet) setMessage("Comptabilité enregistrée.");
       return value;
     } catch {
+      if (quiet) lastFailedSignature.current = requestSignature;
       setMessage("Impossible d’enregistrer la comptabilité.");
       return null;
     } finally {
@@ -218,6 +221,7 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
 
   useEffect(() => {
     if (loading || saving || isClosed || !loaded.current || !hasUnsavedChanges || !isValidDraft(draft)) return;
+    if (lastFailedSignature.current === draftSignature) return;
     const timer = window.setTimeout(() => void persist(draft, true), 800);
     return () => window.clearTimeout(timer);
   }, [draftSignature, loading, saving, isClosed]);
@@ -249,16 +253,23 @@ export function AccountingPanel({ adminCardNumber }: AccountingPanelProps) {
 
   const chooseProduct = (rowId: string, value: string) => {
     const product = products.find((item) => item.id === Number(value));
-    setRows((current) => current.map((row) =>
-      row.id === rowId
-        ? {
-            ...row,
-            productId: product?.id ?? null,
-            label: product?.name ?? "",
-            purchasePricePerLiter: product ? (purchasePriceDefaults.get(product.id) ?? "0") : "0",
-          }
-        : row,
-    ));
+    setRows((current) => current.map((row) => {
+      if (row.id !== rowId) return row;
+      if (!product) {
+        return { ...row, productId: null, label: "", liters: "0", units: "0", purchasePricePerLiter: "0" };
+      }
+      const wasBottleQuantity = Number(row.units) > 0 ? row.units : row.liters;
+      const wasLiquidQuantity = Number(row.liters) > 0 ? row.liters : row.units;
+      const isBottle = bottleProductIds.has(product.id);
+      return {
+        ...row,
+        productId: product.id,
+        label: product.name,
+        liters: isBottle ? "0" : wasLiquidQuantity,
+        units: isBottle ? wasBottleQuantity : "0",
+        purchasePricePerLiter: purchasePriceDefaults.get(product.id) ?? "0",
+      };
+    }));
     setMessage(null);
   };
 
@@ -865,11 +876,24 @@ function newRow(product: ProductCost, defaults: Map<number, string>): EditableRo
 }
 
 function toEditableRows(value: Accounting, catalogue: ProductCost[]) {
-  return value.rows.map(({ id, productId, label, liters, units, purchasePricePerLiter, revenue }) => ({
-    id,
-    productId: productId ?? catalogue.find((product) => normalizeSearch(product.name) === normalizeSearch(label))?.id ?? null,
-    label, liters, units: units ?? "0", purchasePricePerLiter, revenue,
-  }));
+  return value.rows.map(({ id, productId, label, liters, units, purchasePricePerLiter, revenue }) => {
+    const product = productId === null
+      ? catalogue.find((entry) => normalizeSearch(entry.name) === normalizeSearch(label))
+      : catalogue.find((entry) => entry.id === productId);
+    let nextLiters = liters;
+    let nextUnits = units ?? "0";
+    if (product?.productTypeId === BOTTLE_TYPE_ID && Number(nextUnits) === 0 && Number(nextLiters) > 0) {
+      nextUnits = nextLiters;
+      nextLiters = "0";
+    } else if (product && product.productTypeId !== BOTTLE_TYPE_ID && Number(nextLiters) === 0 && Number(nextUnits) > 0) {
+      nextLiters = nextUnits;
+      nextUnits = "0";
+    }
+    return {
+      id, productId: product?.id ?? null, label, liters: nextLiters,
+      units: nextUnits, purchasePricePerLiter, revenue,
+    };
+  });
 }
 
 function defaultsMap(accounting: Accounting) {
@@ -899,15 +923,36 @@ function normalizeRows(rows: EditableRow[]) {
 function isValidDraft(draft: AccountingDraft) {
   const productIds = draft.rows.flatMap((row) => row.productId === null ? [] : [row.productId]);
   return draft.eventName.trim() !== ""
-    && /^\d{4}-\d{2}-\d{2}$/.test(draft.eventDate)
-    && /^\d{2}:\d{2}$/.test(draft.eventStartTime)
-    && /^\d{2}:\d{2}$/.test(draft.eventEndTime)
-    && draft.rows.every((row) => row.productId !== null && row.label.trim() !== ""
-      && normalizeNumber(row.liters) !== null
-      && normalizeNumber(row.units) !== null
-      && normalizeNumber(row.purchasePricePerLiter) !== null
-      && normalizeNumber(row.revenue) !== null)
+    && draft.eventName.trim().length <= 100
+    && isValidCalendarDate(draft.eventDate)
+    && isValidTime(draft.eventStartTime)
+    && isValidTime(draft.eventEndTime)
+    && draft.rows.length <= 200
+    && draft.rows.every((row) => row.productId !== null
+      && row.label.trim() !== ""
+      && row.label.trim().length <= 100
+      && decimalWithin(row.liters, 3, 100_000)
+      && decimalWithin(row.units, 2, 100_000)
+      && decimalWithin(row.purchasePricePerLiter, 4, 100_000)
+      && decimalWithin(row.revenue, 2, 9_999_999.99))
     && new Set(productIds).size === draft.rows.length;
+}
+
+function isValidCalendarDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isValidTime(value: string) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function decimalWithin(value: string, decimals: number, max: number) {
+  const normalized = normalizeNumber(value);
+  if (normalized === null) return false;
+  const fraction = normalized.split(".")[1];
+  return (fraction?.length ?? 0) <= decimals && Number(normalized) <= max;
 }
 
 function normalizeNumber(value: string) {
@@ -926,6 +971,7 @@ function calculateRow(row: EditableRow) {
   const cost = quantity * Number(normalizeNumber(row.purchasePricePerLiter) ?? 0);
   const revenue = Number(normalizeNumber(row.revenue) ?? 0);
   return {
+    quantity,
     liters: Number(normalizeNumber(row.liters) ?? 0),
     units: Number(normalizeNumber(row.units) ?? 0),
     cost,
@@ -1041,10 +1087,9 @@ function createAccountingCsv(
     ...rows.map((row) => {
       const value = calculateRow(row);
       const bottle = row.productId !== null && bottleProductIds.has(row.productId);
-      const quantity = bottle ? value.units : value.liters;
       return [
         row.label,
-        csvNumber(quantity, bottle ? 2 : 3),
+        csvNumber(value.quantity, bottle ? 2 : 3),
         bottle ? "unité" : "litre",
         csvNumber(Number(row.purchasePricePerLiter.replace(",", ".")), 4),
         csvNumber(value.cost, 2),

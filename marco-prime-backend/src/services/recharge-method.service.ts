@@ -44,7 +44,12 @@ async function readStored(): Promise<Stored> {
     throw error;
   }
 
-  const parsed: unknown = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return quarantineCorruptLedger(raw);
+  }
   const current = storedSchema.safeParse(parsed);
   if (current.success) return current.data;
 
@@ -62,6 +67,16 @@ async function readStored(): Promise<Stored> {
     };
   }
 
+  return quarantineCorruptLedger(raw);
+}
+
+async function quarantineCorruptLedger(raw: string): Promise<Stored> {
+  const backup = `${filePath()}.corrupt-${Date.now()}-${process.pid}`;
+  try {
+    await writeFile(backup, raw, { encoding: "utf8", mode: 0o600 });
+  } catch {
+    throw new Error("RECHARGE_METHOD_LEDGER_INVALID");
+  }
   return { version: 2, entries: {} };
 }
 

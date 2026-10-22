@@ -57,7 +57,9 @@ export function HistoryItem({
     ? ledgerAmount >= 0
     : isRecharge || isRechargeCorrected
       ? ledgerAmount <= 0
-      : ledgerAmount >= 0;
+      : isRefund
+        ? ledgerAmount <= 0
+        : ledgerAmount >= 0;
 
   return (
     <button

@@ -211,6 +211,49 @@ describe("Statistics endpoints", () => {
     expect(response.status).toBe(400);
   });
 
+  it("never counts negative productless corrections as recharges", async () => {
+    const created = await db
+      .insert(orders)
+      .values([
+        {
+          productId: null,
+          memberId,
+          price: "10.00",
+          amount: 1,
+          date: new Date("2031-01-01T18:00:00.000Z"),
+        },
+        {
+          productId: null,
+          memberId,
+          price: "-10.00",
+          amount: 1,
+          date: new Date("2031-01-01T18:05:00.000Z"),
+        },
+      ])
+      .$returningId();
+
+    try {
+      const response = await client.api.v1.accounting.export.$post(
+        {
+          json: {
+            adminCardNumber,
+            from: "2031-01-01T00:00:00.000Z",
+            to: "2031-01-02T00:00:00.000Z",
+          },
+        },
+        authenticatedOptions,
+      );
+      expect(response.status).toBe(200);
+      const result = await response.json();
+      expect(result.recharges).toHaveLength(1);
+      expect(result.recharges[0]?.amount).toBe("10.00");
+      expect(result.rechargeSummary.total).toBe("10.00");
+      expect(result.rechargeSummary.count).toBe(1);
+    } finally {
+      await db.delete(orders).where(inArray(orders.id, created.map(({ id }) => id)));
+    }
+  });
+
   it("normalizes current and legacy sales when calculating profit", async () => {
     await client.api.v1.statistics.costs.$put(
       {

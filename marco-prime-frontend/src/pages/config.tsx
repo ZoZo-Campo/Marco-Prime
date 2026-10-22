@@ -10,6 +10,7 @@ import {
   Save,
   Search,
   ShieldAlert,
+  ShieldCheck,
   ShoppingBasket,
   UsersRound,
   Wifi,
@@ -32,11 +33,12 @@ import { MembersPanel } from "../components/features/config/members-panel";
 import { FouailleProductsPanel } from "../components/features/config/fouaille-products-panel";
 import { WifiPanel } from "../components/features/config/wifi-panel";
 import { AdminAuthPanel } from "../components/features/auth/admin-auth-panel";
+import { ConfigPasswordSettings } from "../components/features/config/config-auth-panel";
 
 export const CONFIG_ROUTE_URL = "/config";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
-type AdminSection = "catalog" | "statistics" | "accounting" | "wifi" | "members" | "fouaille-products";
+type AdminSection = "catalog" | "statistics" | "accounting" | "wifi" | "members" | "fouaille-products" | "security";
 const KIOSK_CONTROL_URL = "http://127.0.0.1:3210";
 
 export function ConfigPage() {
@@ -281,6 +283,9 @@ function ConfigContent() {
         <Button variant={section === "members" ? "default" : "outline"} onClick={() => setSection("members")}>
           <UsersRound class="size-5" /> Membres
         </Button>
+        <Button variant={section === "security" ? "default" : "outline"} onClick={() => setSection("security")}>
+          <ShieldCheck class="size-5" /> Sécurité
+        </Button>
         <span class="ml-auto" />
         <Button
           class="shrink-0"
@@ -412,6 +417,19 @@ function ConfigContent() {
       <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
         {adminNavigation}
         <WifiPanel adminCardNumber={member.cardNumber} />
+      </div>
+    );
+  }
+
+  if (section === "security") {
+    return (
+      <div class="flex flex-1 min-h-0 flex-col overflow-hidden">
+        {adminNavigation}
+        <div class="flex-1 overflow-y-auto p-5">
+          <div class="mx-auto max-w-3xl">
+            <ConfigPasswordSettings member={member} />
+          </div>
+        </div>
       </div>
     );
   }

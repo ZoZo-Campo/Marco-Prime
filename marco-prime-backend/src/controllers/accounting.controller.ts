@@ -114,6 +114,7 @@ export class AccountingController {
     const rechargeList = recharges
       .filter(
         (recharge) =>
+          Number(recharge.price) > 0 &&
           !refundIds.has(recharge.id) &&
           !cancelledRechargeIds.has(recharge.id) &&
           !rechargeCancellationIds.has(recharge.id),
@@ -130,7 +131,7 @@ export class AccountingController {
 
     const rechargeTotals = rechargeList.reduce(
       (summary, recharge) => {
-        const amount = Math.abs(Number(recharge.amount));
+        const amount = Number(recharge.amount);
         summary.total += amount;
         summary.count += 1;
         if (recharge.paymentMethod === "card") {
