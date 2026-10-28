@@ -112,16 +112,18 @@ ce fichier manuellement.
 
 Les tests refusent maintenant de démarrer si `DATABASE_URL` ne désigne pas une
 base locale dont le nom contient `test`. Cette protection évite de modifier
-Fouaille par erreur. Avec le conteneur MySQL local de développement :
+Fouaille par erreur. `pnpm test` réinitialise automatiquement la base de test
+(`marco_prime_test`) à partir de `marco-prime-backend/.env.test`, puis lance
+Vitest. Il n'est donc plus nécessaire de reseeder manuellement avant chaque
+exécution. Avec le conteneur MySQL local de développement :
 
 ```bash
 cd "$HOME/Desktop/Marco Prime/marco-prime-backend"
 docker exec marco-prime-mysql mysql -uroot -proot \
   -e "CREATE DATABASE IF NOT EXISTS marco_prime_test; GRANT ALL PRIVILEGES ON marco_prime_test.* TO 'marco'@'%';"
 DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm db:push
-DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm db:seed
-DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm test
-DATABASE_URL=mysql://marco:marco123@127.0.0.1:3306/marco_prime_test pnpm test:coverage
+pnpm test
+pnpm test:coverage
 pnpm build
 
 cd "$HOME/Desktop/Marco Prime/marco-prime-frontend"
