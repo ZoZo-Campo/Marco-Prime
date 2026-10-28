@@ -48,10 +48,20 @@ async function readStored(): Promise<Stored | null> {
   try {
     parsedJson = JSON.parse(raw);
   } catch {
-    return null;
+    return quarantineCorrupt();
   }
   const parsed = storedSchema.safeParse(parsedJson);
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? parsed.data : quarantineCorrupt();
+}
+
+async function quarantineCorrupt(): Promise<never> {
+  const backup = `${filePath()}.corrupt-${Date.now()}-${process.pid}-${randomBytes(4).toString("hex")}`;
+  try {
+    await rename(filePath(), backup);
+  } catch {
+    throw new Error("CONFIG_AUTH_FILE_CORRUPT");
+  }
+  throw new Error("CONFIG_AUTH_FILE_CORRUPT");
 }
 
 async function writeStored(stored: Stored) {
@@ -102,6 +112,7 @@ export const configAuthService = {
   },
 
   async setPassword(adminCardNumber: number, password: string) {
+    await readStored();
     const salt = randomBytes(16).toString("hex");
     const passwordHash = (await deriveKey(password, salt)).toString("hex");
     await writeStored({
